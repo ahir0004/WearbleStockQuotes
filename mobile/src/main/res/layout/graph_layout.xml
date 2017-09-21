@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             xmlns:tools="http://schemas.android.com/tools"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:background="@color/black"
+             android:onClick="shiftPeriod"
+             tools:context="stockquotes.wearable.dk.macallan.wearblestockquotes.GraphActivity"
+
+    >
+
+    <TextView
+        android:id="@+id/headline_textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="TextView"
+        android:textAlignment="center"/>
+
+    <FrameLayout
+        android:id="@+id/graph_view_framelayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="fill_vertical"
+        android:paddingBottom="150px"
+        android:paddingLeft="160px"
+        android:paddingRight="140px"
+        android:paddingTop="150px">
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/y_axis_linearlayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="left"
+        android:orientation="vertical"
+        android:paddingBottom="150px"
+        android:paddingTop="150px"
+        android:weightSum="2">
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/x_axis_linearlayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="bottom"
+        android:orientation="horizontal"
+        android:paddingLeft="160px"
+        android:paddingRight="140px"
+        android:textAlignment="center"
+        android:weightSum="2">
+
+
+    </LinearLayout>
+
+
+</FrameLayout>

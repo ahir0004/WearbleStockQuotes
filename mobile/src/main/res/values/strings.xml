@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">WearableStockQuotes</string>
+    <string name="refresh_button">Refresh</string>
+    <string name="add_stock_title">Add new Stock</string>
+</resources>
