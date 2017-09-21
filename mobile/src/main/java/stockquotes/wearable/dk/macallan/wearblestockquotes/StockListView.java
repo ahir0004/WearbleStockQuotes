@@ -21,7 +21,6 @@ import java.util.Arrays;
 public class StockListView extends ListView implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
 
 
-    public ArrayList<Boolean> isLongPress = new ArrayList<> ();
     private boolean isOnItemClickable;
     private StockListDB stockListDB;
     private ArrayAdapter<String> adapter;
@@ -128,16 +127,16 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
         adapter.notifyDataSetChanged ();
     }
 
-    public void setViewListData (String[] data) {
+    /*public void setViewListData (String[] data) {
         setViewListData (new ArrayList<> (Arrays.asList (data)));
-    }
+    }*/
 
     public void setViewListData (ArrayList<String> data) {
         getStocksList ().clear ();
 
         for (String str : data) {
             getStocksList ().add (str);
-            isLongPress.add (false);
+
         }
         populateListView ();
     }
