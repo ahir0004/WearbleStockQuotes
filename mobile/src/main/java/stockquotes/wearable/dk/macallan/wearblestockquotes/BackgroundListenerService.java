@@ -126,6 +126,8 @@ public class BackgroundListenerService extends WearableListenerService {
     @Override
     public int onStartCommand (Intent intent, int flags, int startId) {
 
+        getHistoricalData();
+
         client = new GoogleApiClient.Builder (this).addConnectionCallbacks (new GoogleApiClient.ConnectionCallbacks () {
             @Override
             public void onConnected (Bundle connectionHint) {
@@ -162,7 +164,7 @@ public class BackgroundListenerService extends WearableListenerService {
         pollQuotesHandler.postDelayed (pollQuotesRunnable, 1000);
         stockListDB = new StockListDB (getApplicationContext ());
 
-        getHistoricalData ();
+        //
         // Issue the notification
         notificationManager =
                 NotificationManagerCompat.from (this);
