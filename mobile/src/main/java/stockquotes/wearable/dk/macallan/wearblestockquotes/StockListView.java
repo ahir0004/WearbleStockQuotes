@@ -6,6 +6,8 @@ import android.graphics.Color;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -41,6 +43,8 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
 
         adapter = new ArrayAdapter<String> (this.getContext (),
                 android.R.layout.simple_list_item_1, android.R.id.text1, quotesArrayList) {
+
+
             @Override
             public View getView (int position, View convertView, ViewGroup parent) {
                 // Get the current item from ListView
@@ -71,12 +75,14 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                         view.getBackground ().setAlpha (100);
                     }
                 }
+                blink (view);
+
                 return view;
             }
         };
 
         this.setAdapter (adapter);
-
+        populateListView ();
         setOnItemClickListener (this);
         // initList ();
         isOnItemClickable = false;
@@ -121,6 +127,17 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
         }
         return requestCodesList.toArray (new String[requestCodesList.size ()]);
 
+    }
+
+    private void blink (View view) {
+        Animation anim = new AlphaAnimation (0.0f, 1.0f);
+        anim.setDuration (750); //You can manage the time of the blink with this parameter
+        //anim.setStartOffset (20);
+        //anim.setRepeatMode (Animation.REVERSE);
+        //anim.setRepeatCount (1);
+       /* lastUpdateTextView.setText ("WAITING FOR DATA...");
+        lastUpdateTextView.startAnimation (anim);*/
+        view.startAnimation (anim);
     }
 
     protected void populateListView () {

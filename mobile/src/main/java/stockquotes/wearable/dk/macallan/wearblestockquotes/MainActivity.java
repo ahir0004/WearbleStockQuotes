@@ -12,6 +12,7 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -261,11 +262,12 @@ public class MainActivity extends Activity implements
 
 
                     }
-                    listView.getAdapter ().notifyDataSetChanged ();
+                    listView.populateListView ();
                     Time now = new Time ();
                     now.setToNow ();
                     String lastUdate = now.format ("%H:%M:%S");
 
+                    ((TextView) findViewById (R.id.lastUpdated)).setText ("Last update: \n" + lastUdate);
 
                 }
             }
