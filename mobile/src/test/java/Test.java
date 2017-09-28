@@ -1,5 +1,3 @@
-package stockquotes.wearable.dk.macallan.wearblestockquotes;
-
 import org.joda.time.DateTime;
 
 import java.text.SimpleDateFormat;

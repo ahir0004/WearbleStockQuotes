@@ -21,12 +21,15 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.MessageApi;
 import com.google.android.gms.wearable.MessageEvent;
+import com.google.android.gms.wearable.Node;
+import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
 import java.util.ArrayList;
@@ -91,7 +94,6 @@ public class MainWearableActivity extends Activity implements
         // Assign adapter to ListView
         listView.setAdapter (adapter);
 
-
         getWindow ().addFlags (WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // ATTENTION: This "addApi(AppIndex.API)"was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
@@ -117,7 +119,7 @@ public class MainWearableActivity extends Activity implements
     }
 
     protected void requestQuotes (View view) {
-        new WearableActivityTask ().execute ();
+        new WearableActivityTask ().execute ("LIST");
         setScreenBrightness (0.5f);
         adapter.notifyDataSetChanged ();
         handler.postDelayed (runnable, 10000l);
@@ -146,14 +148,14 @@ public class MainWearableActivity extends Activity implements
         Wearable.DataApi.addListener (mGoogleApiClient, this);
         Wearable.MessageApi.addListener (mGoogleApiClient, this);
 
-        /*Wearable.NodeApi.getConnectedNodes (mGoogleApiClient).setResultCallback (new ResultCallback<NodeApi.GetConnectedNodesResult> () {
+        Wearable.NodeApi.getConnectedNodes (mGoogleApiClient).setResultCallback (new ResultCallback<NodeApi.GetConnectedNodesResult> () {
             @Override
             public void onResult (NodeApi.GetConnectedNodesResult nodes) {
                 for (Node node : nodes.getNodes ()) {
                     nodeId = node.getId ();
                 }
             }
-        });*/
+        });
 
         requestQuotes (MainWearableActivity.this.getWindow ().getCurrentFocus ());
     }
@@ -238,15 +240,17 @@ public class MainWearableActivity extends Activity implements
         MainWearableActivity.this.getWindow ().setAttributes (layoutParams);
     }
 
-    private class WearableActivityTask extends AsyncTask<Void, Void, Void> {
+    private class WearableActivityTask extends AsyncTask<String, String, String> {
 
         @Override
-        protected Void doInBackground (Void... args) {
+        protected String doInBackground (String... args) {
 
-            byte[] bytes = "hello_there".getBytes ();
+            String PATH = args[0].toUpperCase ();
 
-            MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage (mGoogleApiClient, nodeId, "SEND_MORE_MONEY",
-                    bytes).await ();
+            String stockCode = args[1];
+
+            MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage (mGoogleApiClient, nodeId, PATH,
+                    stockCode.getBytes ()).await ();
 
             if (!result.getStatus ().isSuccess ()) {
                 Log.e (TAG, "ERROR: failed to send Message: " + result.getStatus ());
@@ -254,6 +258,8 @@ public class MainWearableActivity extends Activity implements
 
             return null;
         }
+
+
     }
 
 

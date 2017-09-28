@@ -207,12 +207,12 @@ public class MainActivity extends Activity implements
     public void onMessageReceived (MessageEvent messageEvent) {
 
         /*String theTxt =  new String(messageEvent.getData());
-*/
-        //nodeId = messageEvent.getSourceNodeId();
+
+        nodeId = messageEvent.getSourceNodeId();
 
 
-        //  Toast.makeText (MainActivity.this, "hello from Mobile", Toast.LENGTH_SHORT).show ();
-        //sendNotification ();
+          Toast.makeText (MainActivity.this, "hello from Mobile", Toast.LENGTH_SHORT).show ();
+        sendNotification ();*/
 
     }
 
@@ -257,6 +257,8 @@ public class MainActivity extends Activity implements
                                 .append (quoteChunks[2])
                                 .append (" / ")
                                 .append (quoteChunks[3])
+                                .append ("\t\t\t")
+                                .append (quoteChunks[4])
                                 .toString ())
                         ;
 
@@ -304,4 +306,14 @@ public class MainActivity extends Activity implements
 
     }
 
+
+    private double getRSI (String stockName) {
+
+        double rsiIndicator = 0.0;
+        RSI rsi = new RSI (14, stockName.toUpperCase (), stockListDB);
+        rsiIndicator = rsi.calculate ();
+
+        return rsiIndicator;
+
+    }
 }

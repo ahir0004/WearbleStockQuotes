@@ -61,7 +61,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                 }
 
 
-                if (getRequestCodes ().length > 0) {
+                if (getRequestCodes ().length > 0 && getRequestCodes ().length > position) {
                     String stockId = getRequestCodes ()[position].split (":")[0];
                     Cursor cursor = stockListDB.readSuspendedNotification (stockId);
 

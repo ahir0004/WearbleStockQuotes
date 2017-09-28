@@ -246,6 +246,17 @@ public class BackgroundListenerService extends WearableListenerService {
 
     @Override
     public void onMessageReceived(MessageEvent messageEvent) {
+        String theTxt = new String (messageEvent.getData ());
+        String thePath = new String (messageEvent.getPath ()),
+                nodeId = messageEvent.getSourceNodeId ();
+
+
+        Toast.makeText (BackgroundListenerService.this, "hello from Listener", Toast.LENGTH_SHORT).show ();
+        if ("LIST".equals (thePath)) {
+            sendNotification ();
+        } else {
+
+        }
     }
 
     private void executeRequest() {
@@ -271,6 +282,18 @@ public class BackgroundListenerService extends WearableListenerService {
             stringBuilder.setLength(0);
         }
         return quotesList.toArray(new String[quotesList.size()]);
+    }
+
+    private double getRSI (int index) {
+
+        String stockName = getRequestCodes ()[index].split ("::")[1].split (":")[1];
+
+        double rsiIndicator = 0.0;
+        RSI rsi = new RSI (14, stockName.toUpperCase (), stockListDB);
+        rsiIndicator = rsi.calculate ();
+
+        return rsiIndicator;
+
     }
 
     private class DownloadWebPageTask extends AsyncTask<String, Void, String> {
@@ -335,8 +358,8 @@ public class BackgroundListenerService extends WearableListenerService {
                         .append(deltaRate)
                         .append(separator)
                         .append(deltaRatePercent)
-//                            .append (separator)
-//                            .append (time)
+                        .append (separator)
+                        .append (getRSI (quotesArrayList.size ()))
                         .toString());
 
                 pushNotification(quotesArrayList.size(), name, deltaRatePercent);

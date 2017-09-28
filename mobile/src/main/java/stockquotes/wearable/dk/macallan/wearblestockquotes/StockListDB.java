@@ -101,6 +101,13 @@ public class StockListDB extends SQLiteOpenHelper {
         return readableDatabase.rawQuery (sb.toString (), null);
     }
 
+    protected Cursor getRSIData (String stock_name) {
+        SQLiteDatabase readableDatabase = this.getReadableDatabase ();
+        return readableDatabase.rawQuery ("SELECT TRADE_DATE, JSON_OBJECT FROM HIST_STOCK_QUOTES " +
+                "WHERE STOCK_ID in(select _id from STOCK_QUOTES WHERE STOCK_CODE ='" + stock_name + "')" +
+                " ORDER BY TRADE_DATE ASC ", null);
+    }
+
     protected Cursor readStockCodes () {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
         return readableDatabase.rawQuery ("SELECT * FROM STOCK_QUOTES", null);
