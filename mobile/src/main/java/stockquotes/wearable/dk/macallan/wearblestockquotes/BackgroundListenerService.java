@@ -115,8 +115,6 @@ public class BackgroundListenerService extends WearableListenerService {
 
             requestCodesList.add(stringBuilder.append(cursor.getInt(0)).append("::")
                     .append(cursor.getString(1))
-                    .append(":")
-                    .append(cursor.getString(2))
                     .toString());
             stringBuilder.setLength(0);
         }
@@ -276,9 +274,7 @@ public class BackgroundListenerService extends WearableListenerService {
         ArrayList<String> quotesList = new ArrayList<>();
         StringBuilder stringBuilder = new StringBuilder();
         while (cursor.moveToNext()) {
-            stringBuilder.append(cursor.getString(2))
-                    .append(".")
-                    .append(cursor.getString(1));
+            stringBuilder.append (cursor.getString (1));
             quotesList.add(stringBuilder.toString());
             stringBuilder.setLength(0);
         }
@@ -287,7 +283,7 @@ public class BackgroundListenerService extends WearableListenerService {
 
     private String getRSI (int index, String liveRate) {
 
-        String stockName = getRequestCodes ()[index].split ("::")[1].split (":")[1];
+        String stockName = getRequestCodes ()[index].split ("::")[1];
 
         double rsiIndicator = 0.0;
         RSI rsi = new RSI (14, stockName.toUpperCase (), stockListDB, liveRate);

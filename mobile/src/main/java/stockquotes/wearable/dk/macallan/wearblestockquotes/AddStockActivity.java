@@ -43,17 +43,17 @@ public class AddStockActivity extends Activity {
             @Override
             public void onClick (View v) {
                 String input = editText.getText ().toString ().toUpperCase ();
-                String[] codes = input.split ("\\.");
+                // String[] codes = input.split ("\\.");
 
                 editText.setText ("");
 
-                long id = stockListDB.insert (codes);
+                long id = stockListDB.insert (input);
 
                 if (id != -1l) {
                     hideKeyboard ();
                     listView.initList ();
                     HistoricalDataTask hdt = new HistoricalDataTask (getApplicationContext ());
-                    hdt.execute (id + "::" + codes[1] + ":" + codes[0]);
+                    hdt.execute (id + "::" + input);
                 }
 
             }

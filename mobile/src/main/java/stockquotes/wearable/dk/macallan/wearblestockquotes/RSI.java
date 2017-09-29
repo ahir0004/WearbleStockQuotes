@@ -25,7 +25,8 @@ public class RSI {
         this.periodLength = periodLength;
         avgList = new ArrayList<Averages> ();
         prices = getPrices (symbol, db);
-        prices.add (Double.parseDouble (latestDayRate));
+        if (prices.size () > 0)
+            prices.add (Double.parseDouble (latestDayRate));
 
     }
 
@@ -52,6 +53,10 @@ public class RSI {
 
 
     public String calculate () {
+
+
+        if (prices.size () == 0)
+            return "";
 
 
         double value = 0;

@@ -10,6 +10,7 @@ import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -35,7 +36,7 @@ public class GraphActivity extends Activity {
 
     private static int defaultDays = 5;
     private FrameLayout graphViewFrameLayout;
-    private ArrayList<String> stockValues;
+    private ArrayList<Double> stockValues;
     private int days2Chart;
     private LinearLayout yValuesLLayout;
     private LinearLayout xValuesLLayout;
@@ -62,7 +63,10 @@ public class GraphActivity extends Activity {
     public void onCreate (Bundle savedInstanceState) {
         super.onCreate (savedInstanceState);
         // as the ContentView for this Activity.
+        getWindow ().addFlags (WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow ().addFlags (WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         setContentView (R.layout.graph_layout);
+
 
         yValuesLLayout = (LinearLayout) findViewById (R.id.y_axis_linearlayout);
         xValuesLLayout = (LinearLayout) findViewById (R.id.x_axis_linearlayout);
@@ -93,7 +97,7 @@ public class GraphActivity extends Activity {
     private void initializeGraphData (String id) throws JSONException {
 
         ArrayList<String> jsonObjects = getGraphDataFromDB (id, days2Chart);
-        stockValues = new ArrayList<String> ();
+        stockValues = new ArrayList<Double> ();
         stockDates = new ArrayList<DateTime> ();
 
         for (int i = 0; i < jsonObjects.size (); i++) {
@@ -101,7 +105,7 @@ public class GraphActivity extends Activity {
 
             try {
                 String close = jsonObj.get ("close").toString ();
-                stockValues.add (close);
+                stockValues.add (new Double (close));
             } catch (JSONException e) {
                 continue;
             }
@@ -120,23 +124,23 @@ public class GraphActivity extends Activity {
         xValuesLLayout.removeAllViewsInLayout ();
         yValuesLLayout.removeAllViewsInLayout ();
 
-        ArrayList<String> yCoords = (ArrayList<String>) stockValues.clone ();
+        ArrayList<Double> yCoords = (ArrayList<Double>) stockValues.clone ();
         Collections.sort (stockDates);
         Collections.sort (yCoords);
 
-        float max = 0.0f;
-        float min = 0.0f;
-        float midlle = 0.0f;
+        double max = 0.0f;
+        double min = 0.0f;
+        double midlle = 0.0f;
 
-        float[] yCoordsArr = new float[stockValues.size ()];
+        double[] yCoordsArr = new double[stockValues.size ()];
         int numberOfYs = yCoords.size ();
         float yWeight = 0.5f;
 
 
-        max = Float.parseFloat (Collections.max (yCoords));
-        min = Float.parseFloat (Collections.min (yCoords));
+        max = Collections.max (yCoords);
+        min = Collections.min (yCoords);
         midlle = (max + min) / 2;
-        float delta = (max - min) / (yCoordsArr.length - 1);
+        double delta = (max - min) / (yCoordsArr.length - 1);
 
 
         yCoordsArr[0] = min;
@@ -165,8 +169,8 @@ public class GraphActivity extends Activity {
             ));
             ys.setBackgroundColor (Color.TRANSPARENT);
             ys.setTextColor (Color.WHITE);
-            String rate = String.valueOf (yCoordsArr[k]);
-            ys.setText (String.format (Locale.US, "%.2f", yCoordsArr[k]));
+
+            ys.setText (String.format (Locale.US, "%.1f", yCoordsArr[k]));
             ys.setTextAlignment (View.TEXT_ALIGNMENT_TEXT_END);
             yValuesLLayout.addView (ys);
         }
@@ -216,7 +220,7 @@ public class GraphActivity extends Activity {
         setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         TextView headLine = (TextView) findViewById (R.id.headline_textView);
-        headLine.setText (stockName.toUpperCase () + "\n(" + days2Chart + " days)");
+        headLine.setText (stockName.toUpperCase () + " (" + days2Chart + " days)");
         headLine.setTextColor (Color.YELLOW);
         headLine.setTextSize (25.0f);
         headLine.setGravity (Gravity.CENTER_HORIZONTAL);
@@ -234,15 +238,15 @@ public class GraphActivity extends Activity {
         @Override
         protected void onSizeChanged (int w, int h, int oldw, int oldh) {
             super.onSizeChanged (w, h, oldw, oldh);
-            String max = "";
-            String min = "";
+            Double max = 0.0;
+            Double min = 0.0;
             try {
                 max = Collections.max (stockValues);
                 min = Collections.min (stockValues);
             } catch (Exception e) {
                 e.printStackTrace ();
             }
-            float delta = (Float.parseFloat (max) - Float.parseFloat (min));
+            double delta = max - min;
 
             int j = stockValues.size () - 1;
 
@@ -256,15 +260,14 @@ public class GraphActivity extends Activity {
                     lineCoords[i] = lineCoords[i - 2] + deltaX;
 
                 } else {
-                    float diff = Float.parseFloat (stockValues.get (j)) - Float.parseFloat (min);
-                    float tmp = ((diff / delta) * h);
+                    double diff = stockValues.get (j) - min;
+                    double tmp = ((diff / delta) * h);
 
                     lineCoords[i] = h - tmp;
                     j--;
                 }
             }
 
-//            lineCoords[(stockValues.size ()+stockDates.size ())-2] = w;
         }
 
         @Override

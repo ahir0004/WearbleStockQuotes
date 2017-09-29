@@ -25,7 +25,9 @@
         <activity android:name=".AddStockActivity">
 
         </activity>
-        <activity android:name=".GraphActivity">
+        <activity
+            android:name=".GraphActivity"
+            android:theme="@android:style/Theme.NoTitleBar">
 
         </activity>
 

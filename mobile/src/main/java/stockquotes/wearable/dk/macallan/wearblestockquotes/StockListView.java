@@ -120,9 +120,8 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
         while (cursor.moveToNext ()) {
             requestCodesList.add (stringBuilder.append (cursor.getInt (0))
                     .append (": ")
-                    .append (cursor.getString (2))
-                    .append (".")
-                    .append (cursor.getString (1)).toString ());
+                    .append (cursor.getString (1))
+                    .toString ());
             stringBuilder.setLength (0);
         }
         return requestCodesList.toArray (new String[requestCodesList.size ()]);

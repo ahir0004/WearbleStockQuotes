@@ -25,13 +25,10 @@ class HistoricalDataTask extends AsyncTask<String, Void, String> {
     protected String doInBackground (String... urls) {
 
         String stockId = urls[0].split ("::")[0];
-        String stockExchangeCode = urls[0].split ("::")[1].split (":")[0];
-        String stockCode = urls[0].split ("::")[1].split (":")[1];
+        String stockCode = urls[0].split ("::")[1];
 
         StringBuilder sb = new StringBuilder ();
         sb.append (stockCode);
-        sb.append (".");
-        sb.append (stockExchangeCode);
 
         Cursor cursor = histDB.readHistoricalStockData (stockId, 1);
 

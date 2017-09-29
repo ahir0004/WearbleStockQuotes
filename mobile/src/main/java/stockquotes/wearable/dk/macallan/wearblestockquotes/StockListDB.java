@@ -21,8 +21,8 @@ public class StockListDB extends SQLiteOpenHelper {
 
     @Override
     public void onCreate (SQLiteDatabase db) {
-        db.execSQL ("CREATE TABLE STOCK_QUOTES ( _ID INTEGER PRIMARY KEY AUTOINCREMENT, STOCK_EXCHANGE_CODE, STOCK_CODE, " +
-                "SUSPEND_NOTIFICATION integer, UNIQUE (STOCK_EXCHANGE_CODE, STOCK_CODE) ON CONFLICT ABORT );");
+        db.execSQL ("CREATE TABLE STOCK_QUOTES ( _ID INTEGER PRIMARY KEY AUTOINCREMENT, STOCK_CODE, " +
+                "SUSPEND_NOTIFICATION integer, UNIQUE (STOCK_CODE) ON CONFLICT ABORT );");
 
         db.execSQL ("CREATE TABLE HIST_STOCK_QUOTES (HIST_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "TRADE_DATE numeric, " +
@@ -41,11 +41,11 @@ public class StockListDB extends SQLiteOpenHelper {
         onCreate (db);
     }
 
-    protected long insert (String[] codes) {
+    protected long insert (String code) {
 
         ContentValues values = new ContentValues ();
-        values.put ("STOCK_EXCHANGE_CODE", codes[1]);
-        values.put ("STOCK_CODE", codes[0]);
+        //values.put ("STOCK_EXCHANGE_CODE", codes[1]);
+        values.put ("STOCK_CODE", code);
         values.put ("SUSPEND_NOTIFICATION", 0);
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase ();
         sqLiteDatabase.beginTransaction ();
@@ -117,14 +117,14 @@ public class StockListDB extends SQLiteOpenHelper {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
         return readableDatabase.rawQuery ("SELECT SUSPEND_NOTIFICATION FROM STOCK_QUOTES WHERE _ID=" + stockId, null);
     }
-
+/*
     protected void removeHistStockDataFromDB () {
         SQLiteDatabase writableDatabase = this.getWritableDatabase ();
         writableDatabase.beginTransaction ();
         writableDatabase.execSQL ("DELETE FROM HIST_STOCK_QUOTES");
         writableDatabase.setTransactionSuccessful ();
         writableDatabase.endTransaction ();
-    }
+    }*/
 
     protected void removeStockFromDB (String stockListId) {
         SQLiteDatabase writableDatabase = this.getWritableDatabase ();

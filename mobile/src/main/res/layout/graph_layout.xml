@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
              xmlns:tools="http://schemas.android.com/tools"
+
              android:layout_width="match_parent"
              android:layout_height="match_parent"
              android:background="@color/black"
@@ -22,8 +23,8 @@
         android:layout_height="match_parent"
         android:layout_gravity="fill_vertical"
         android:paddingBottom="150px"
-        android:paddingLeft="160px"
-        android:paddingRight="140px"
+        android:paddingLeft="180px"
+        android:paddingRight="120px"
         android:paddingTop="150px">
 
     </FrameLayout>
