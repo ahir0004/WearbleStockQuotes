@@ -257,7 +257,7 @@ public class MainActivity extends Activity implements
                                 .append (quoteChunks[2])
                                 .append (" / ")
                                 .append (quoteChunks[3])
-                                .append ("\t\t\t")
+                                .append ("                 RSI_14: ")
                                 .append (quoteChunks[4])
                                 .toString ())
                         ;
@@ -307,13 +307,5 @@ public class MainActivity extends Activity implements
     }
 
 
-    private double getRSI (String stockName) {
 
-        double rsiIndicator = 0.0;
-        RSI rsi = new RSI (14, stockName.toUpperCase (), stockListDB);
-        rsiIndicator = rsi.calculate ();
-
-        return rsiIndicator;
-
-    }
 }

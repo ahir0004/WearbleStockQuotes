@@ -86,7 +86,7 @@ public class BackgroundListenerService extends WearableListenerService {
         }).start();
     }
 
-    private void sendNotification() {
+    private void sendNotification () {
 //        if (client.isConnected ()) {
 
 
@@ -252,11 +252,12 @@ public class BackgroundListenerService extends WearableListenerService {
 
 
         Toast.makeText (BackgroundListenerService.this, "hello from Listener", Toast.LENGTH_SHORT).show ();
-        if ("LIST".equals (thePath)) {
+        /*if ("LIST".equals (thePath)) {
             sendNotification ();
         } else {
 
-        }
+        }*/
+        sendNotification ();
     }
 
     private void executeRequest() {
@@ -284,15 +285,14 @@ public class BackgroundListenerService extends WearableListenerService {
         return quotesList.toArray(new String[quotesList.size()]);
     }
 
-    private double getRSI (int index) {
+    private String getRSI (int index, String liveRate) {
 
         String stockName = getRequestCodes ()[index].split ("::")[1].split (":")[1];
 
         double rsiIndicator = 0.0;
-        RSI rsi = new RSI (14, stockName.toUpperCase (), stockListDB);
-        rsiIndicator = rsi.calculate ();
+        RSI rsi = new RSI (14, stockName.toUpperCase (), stockListDB, liveRate);
 
-        return rsiIndicator;
+        return rsi.calculate ();
 
     }
 
@@ -359,16 +359,14 @@ public class BackgroundListenerService extends WearableListenerService {
                         .append(separator)
                         .append(deltaRatePercent)
                         .append (separator)
-                        .append (getRSI (quotesArrayList.size ()))
+                        .append (getRSI (quotesArrayList.size (), rate))
                         .toString());
 
                 pushNotification(quotesArrayList.size(), name, deltaRatePercent);
 
                 if (getStockRequestCodes().length == quotesArrayList.size()) {
                     //getQuotesArrayList ().addAll (listOfQuotes);
-
                     sendNotification();
-
                 }
 
             } catch (JSONException e) {

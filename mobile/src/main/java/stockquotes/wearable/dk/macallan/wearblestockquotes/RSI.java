@@ -6,6 +6,8 @@ import org.joda.time.DateTime;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 
 /**
@@ -18,11 +20,12 @@ public class RSI {
     private int periodLength;
 
 
-    public RSI (int periodLength, String symbol, StockListDB db) {
+    public RSI (int periodLength, String symbol, StockListDB db, String latestDayRate) {
         super ();
         this.periodLength = periodLength;
         avgList = new ArrayList<Averages> ();
         prices = getPrices (symbol, db);
+        prices.add (Double.parseDouble (latestDayRate));
 
     }
 
@@ -48,7 +51,7 @@ public class RSI {
     }
 
 
-    public double calculate () {
+    public String calculate () {
 
 
         double value = 0;
@@ -105,11 +108,8 @@ public class RSI {
         }
         value = 100 - (100 / (1 + (avgUp / avgDown)));
 
-        return Math.round (value);
-    }
-
-    public int getPeriodLength () {
-        return periodLength;
+        NumberFormat formatter = new DecimalFormat ("#0.00");
+        return formatter.format (value);
     }
 
     private class Averages {
