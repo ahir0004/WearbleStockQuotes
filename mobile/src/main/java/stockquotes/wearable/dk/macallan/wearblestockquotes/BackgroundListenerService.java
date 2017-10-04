@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -45,8 +46,8 @@ public class BackgroundListenerService extends WearableListenerService {
     public static final String NOTIFICATION_PATH = "/notification";
     private static final String SEND_MORE_MONEY_PATH = "SEND_MORE_MONEY";
     private static final String NOTIFICATION_CONTENT = "content";
-    ArrayList<String> quotesArrayList = new ArrayList<String>();
     Handler pollQuotesHandler;
+    private List<String> quotesArrayList = Collections.synchronizedList (new ArrayList<String> ());
     private int counter = 0;
     private GoogleApiClient client;
     private String nodeId;
@@ -96,19 +97,28 @@ public class BackgroundListenerService extends WearableListenerService {
         // situations. However, in this example, the text and the content are always the same, so we need
         // to disambiguate the data item by adding a field that contains teh current time in milliseconds.
 
-        dataMapRequest.getDataMap().putStringArrayList(NOTIFICATION_CONTENT, (ArrayList<String>) getQuotesArrayList().clone());
+
+        ArrayList<String> theArrayList = new ArrayList<String> ();
+
+        for (String str : getQuotesArrayList ()) {
+
+            theArrayList.add (str);
+        }
+
+
+        dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, theArrayList);
         PutDataRequest putDataRequest = dataMapRequest.asPutDataRequest();
 
         Wearable.DataApi.putDataItem(client, putDataRequest);
 
     }
 
-    private synchronized ArrayList<String> getQuotesArrayList() {
+    private synchronized List<String> getQuotesArrayList () {
         return quotesArrayList;
     }
 
     protected String[] getRequestCodes() {
-        Cursor cursor = new StockListDB(BackgroundListenerService.this).readStockCodes();
+        Cursor cursor = StockListDB.getInstance (BackgroundListenerService.this).readStockCodes ();
         StringBuilder stringBuilder = new StringBuilder();
         ArrayList<String> requestCodesList = new ArrayList<>();
         while (cursor.moveToNext()) {
@@ -161,7 +171,7 @@ public class BackgroundListenerService extends WearableListenerService {
         super.onCreate();
         pollQuotesHandler = new Handler();
         pollQuotesHandler.postDelayed(pollQuotesRunnable, 1000);
-        stockListDB = new StockListDB(getApplicationContext());
+        stockListDB = StockListDB.getInstance (getApplicationContext ());
 
         //
         // Issue the notification
@@ -270,7 +280,7 @@ public class BackgroundListenerService extends WearableListenerService {
     }
 
     private String[] getStockRequestCodes() {
-        Cursor cursor = new StockListDB(getApplicationContext()).readStockCodes();
+        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
         ArrayList<String> quotesList = new ArrayList<>();
         StringBuilder stringBuilder = new StringBuilder();
         while (cursor.moveToNext()) {
@@ -345,24 +355,27 @@ public class BackgroundListenerService extends WearableListenerService {
                 String deltaRatePercent = jsonQueryObj.getString("PercentChange");
 
                 final String separator = "::";
+                synchronized (quotesArrayList) {
+                    // ArrayList<String> listOfQuotes = new ArrayList<> ();
+                    quotesArrayList.add (new StringBuilder (name)
+                            .append (separator)
+                            .append (rate)
+                            .append (separator)
+                            .append (deltaRate)
+                            .append (separator)
+                            .append (deltaRatePercent)
+                            .append (separator)
+                            .append (getRSI (quotesArrayList.size (), rate))
+                            .toString ());
 
-                // ArrayList<String> listOfQuotes = new ArrayList<> ();
-                quotesArrayList.add(new StringBuilder(name)
-                        .append(separator)
-                        .append(rate)
-                        .append(separator)
-                        .append(deltaRate)
-                        .append(separator)
-                        .append(deltaRatePercent)
-                        .append (separator)
-                        .append (getRSI (quotesArrayList.size (), rate))
-                        .toString());
+                    pushNotification (quotesArrayList.size (), name, deltaRatePercent);
 
-                pushNotification(quotesArrayList.size(), name, deltaRatePercent);
+                    int lengthReqCodes = getStockRequestCodes ().length;
+                    int sizeOfQuoteArraylist = quotesArrayList.size ();
 
-                if (getStockRequestCodes().length == quotesArrayList.size()) {
-                    //getQuotesArrayList ().addAll (listOfQuotes);
-                    sendNotification();
+                    if (lengthReqCodes == sizeOfQuoteArraylist) {
+                        sendNotification ();
+                    }
                 }
 
             } catch (JSONException e) {

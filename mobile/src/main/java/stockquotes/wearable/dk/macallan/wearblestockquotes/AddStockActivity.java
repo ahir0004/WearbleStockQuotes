@@ -23,7 +23,7 @@ public class AddStockActivity extends Activity {
         super.onCreate (bundle);
         this.setTitle (R.string.add_stock_title);
 
-        stockListDB = new StockListDB (this);
+        stockListDB = StockListDB.getInstance (this);
 
         editText = new EditText (this);
 

@@ -14,9 +14,21 @@ import org.joda.time.DateTime;
 public class StockListDB extends SQLiteOpenHelper {
     private static String DATABASE_NAME = "wearable_stocks.db";
     private static int VERSION = 1;
+    private static StockListDB sInstance;
 
-    public StockListDB (Context context) {
+    private StockListDB (Context context) {
         super (context, DATABASE_NAME, null, VERSION);
+    }
+
+    public static synchronized StockListDB getInstance (Context context) {
+
+        // Use the application context, which will ensure that you
+        // don't accidentally leak an Activity's context.
+        // See this article for more information: http://bit.ly/6LRzfx
+        if (sInstance == null) {
+            sInstance = new StockListDB (context.getApplicationContext ());
+        }
+        return sInstance;
     }
 
     @Override

@@ -18,7 +18,7 @@ class HistoricalDataTask extends AsyncTask<String, Void, String> {
 
     public HistoricalDataTask (Context context) {
         super ();
-        histDB = new StockListDB (context);
+        histDB = StockListDB.getInstance (context);
     }
 
     @Override

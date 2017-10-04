@@ -86,7 +86,7 @@ public class GraphActivity extends Activity {
 
 
     protected ArrayList<String> getGraphDataFromDB (String id, int days) {
-        Cursor cursor = new StockListDB (getApplicationContext ()).readHistoricalStockData (id, days);
+        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readHistoricalStockData (id, days);
         ArrayList<String> histDataList = new ArrayList<> ();
         while (cursor.moveToNext ()) {
             histDataList.add (cursor.getString (2));

@@ -56,7 +56,7 @@ public class MainActivity extends Activity implements
     protected void onCreate (Bundle savedInstanceState) {
         super.onCreate (savedInstanceState);
 
-        stockListDB = new StockListDB (getApplicationContext ());
+        stockListDB = StockListDB.getInstance (getApplicationContext ());
 
         Toast.makeText (this, "starting service", Toast.LENGTH_LONG).show ();
         Intent theServiceIntent = new Intent (MainActivity.this, BackgroundListenerService.class);

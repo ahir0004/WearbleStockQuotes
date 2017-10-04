@@ -38,7 +38,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
     public StockListView (Context context, AttributeSet attrs) {
         super (context, attrs);
 
-        stockListDB = new StockListDB (context);
+        stockListDB = StockListDB.getInstance (context);
         quotesArrayList = new ArrayList<> ();
 
         adapter = new ArrayAdapter<String> (this.getContext (),
