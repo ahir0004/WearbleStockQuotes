@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import org.joda.time.DateTime;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Created by macallan on 17-09-16.
@@ -88,6 +90,20 @@ public class StockListDB extends SQLiteOpenHelper {
         if (theDate.toLocalDate ().isEqual (new DateTime ().toLocalDate ())) {
             return;
         }
+
+        try {
+
+            JSONObject jsonObject = new JSONObject (histData[0]);
+
+            if ("null".equals (jsonObject.getString ("close"))) {
+                return;
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace ();
+            return;
+        }
+
 
         ContentValues values = new ContentValues ();
         values.put ("STOCK_ID", histData[2].replace (":", ""));

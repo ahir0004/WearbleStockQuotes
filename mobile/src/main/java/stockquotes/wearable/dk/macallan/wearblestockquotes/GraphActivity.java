@@ -33,8 +33,11 @@ import java.util.Locale;
 
 public class GraphActivity extends Activity {
 
-
     private static int defaultDays = 5;
+    private ArrayList<Double> sma;
+    private int windowHeight;
+    private double deltaY;
+    private double minY = 0.0;
     private FrameLayout graphViewFrameLayout;
     private ArrayList<Double> stockValues;
     private int days2Chart;
@@ -47,8 +50,8 @@ public class GraphActivity extends Activity {
 
 
     public void shiftPeriod (View view) {
-        int periods[] = {20, 60, 200, defaultDays};
-        days2Chart = periods[(i == periods.length) ? i = 0 : i++];
+        int periods[] = {defaultDays, 20, 60, 200};
+        days2Chart = periods[i == (periods.length - 1) ? i = 0 : ++i];
 
         try {
             initializeGraphData (stockId);
@@ -76,6 +79,7 @@ public class GraphActivity extends Activity {
         days2Chart = getIntent ().getIntExtra ("chartDays", 5);
 
         try {
+            loadSMA (stockId, 60);
             initializeGraphData (stockId);
             calculateAndDisplayCoordinates ();
         } catch (JSONException e) {
@@ -227,6 +231,46 @@ public class GraphActivity extends Activity {
         headLine.setBackgroundColor (Color.TRANSPARENT);
     }
 
+    private void loadSMA (String stockId, int days) {
+
+        sma = new ArrayList<> ();
+        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readHistoricalStockData (stockId, 250);
+        ArrayList<String> histDatesList = new ArrayList<> ();
+        ArrayList<String> histDataList = new ArrayList<> ();
+
+        while (cursor.moveToNext ()) {
+            histDatesList.add (cursor.getString (1));
+            histDataList.add (cursor.getString (2));
+        }
+
+        for (int i = 0; i < histDataList.size () - 60; i++) {
+            sma.add (calculateAverage (histDataList, (i)));
+        }
+
+        Collections.reverse (sma);
+    }
+
+    private double calculateAverage (ArrayList<String> data, int i) {
+        double theAverage = 0.0;
+        double close = 0.0;
+
+        for (int j = i; j < (60 + i); j++) {
+
+            if (j > data.size () - 1) {
+                break;
+            }
+            try {
+                JSONObject jsonObject = new JSONObject (data.get (j));
+                close = new Double (jsonObject.get ("close").toString ());
+            } catch (JSONException e) {
+                e.printStackTrace ();
+                continue;
+            }
+            theAverage = theAverage + close;
+        }
+        return theAverage / 60.0;
+    }
+
     private class ChartView extends View {
 
         double lineCoords[] = new double[(stockValues.size () + stockDates.size ())];
@@ -243,10 +287,13 @@ public class GraphActivity extends Activity {
             try {
                 max = Collections.max (stockValues);
                 min = Collections.min (stockValues);
+                minY = min;
             } catch (Exception e) {
                 e.printStackTrace ();
             }
             double delta = max - min;
+            deltaY = delta;
+            windowHeight = h;
 
             int j = stockValues.size () - 1;
 
@@ -276,6 +323,11 @@ public class GraphActivity extends Activity {
             Paint paint = new Paint ();
             paint.setColor (Color.GREEN);
             paint.setStrokeWidth (10f);
+
+            Paint paintSMA = new Paint ();
+            paintSMA.setColor (Color.BLUE);
+            paintSMA.setStrokeWidth (3f);
+
             setBackgroundColor (Color.WHITE);
 
             for (int i = 0; i < (lineCoords.length - 2); i = i + 2) {
@@ -289,7 +341,31 @@ public class GraphActivity extends Activity {
                 canvas.drawLine (startX, startY, endX, endY, paint);
 
             }
+
+
+            //if(lineCoords.length > 100 ) {
+            int k = 2;
+            for (int j = sma.size (); j > 2; j--) {
+
+                if ((k + 2) > lineCoords.length) {
+                    break;
+                }
+                float startX2 = (float) lineCoords[lineCoords.length - k];
+                double diff = sma.get (j - 1).doubleValue () - minY;
+                double tmp = ((diff / deltaY) * windowHeight);
+                float startY2 = (float) (windowHeight - tmp);
+
+                float endX2 = (float) lineCoords[lineCoords.length - (k + 2)];
+
+                diff = sma.get (j - 2).doubleValue () - minY;
+                tmp = ((diff / deltaY) * windowHeight);
+                float endY2 = (float) (windowHeight - tmp);
+                canvas.drawLine (startX2, startY2, endX2, endY2, paintSMA);
+
+                k = k + 2;
+            }
         }
+
 
     }
 

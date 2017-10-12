@@ -3,7 +3,6 @@ package stockquotes.wearable.dk.macallan.wearblestockquotes;
 import android.database.Cursor;
 
 import org.joda.time.DateTime;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.DecimalFormat;
@@ -42,8 +41,9 @@ public class RSI {
                 DateTime date = new DateTime (1000l * cursor.getLong (0));
                 jsonObject = new JSONObject (cursor.getString (1));
                 localAL.add (Double.parseDouble (jsonObject.get ("close").toString ()));
-            } catch (JSONException e) {
+            } catch (Exception e) {
                 e.printStackTrace ();
+                continue;
             }
 
 

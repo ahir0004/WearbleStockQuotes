@@ -293,6 +293,10 @@ public class BackgroundListenerService extends WearableListenerService {
 
     private String getRSI (int index, String liveRate) {
 
+        if (getRequestCodes ().length == index || getRequestCodes ().length < index) {
+            return "";
+        }
+
         String stockName = getRequestCodes ()[index].split ("::")[1];
 
         double rsiIndicator = 0.0;
