@@ -1,17 +1,11 @@
 package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
-import android.app.Notification;
-import android.app.PendingIntent;
 import android.content.Intent;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -53,13 +47,12 @@ public class BackgroundListenerService extends WearableListenerService {
     private String nodeId;
     private List<Node> nodes;
     private StockListDB stockListDB;
-    private NotificationManagerCompat notificationManager;
 
     private Runnable pollQuotesRunnable = new Runnable() {
         @Override
         public void run() {
             executeRequest();
-            pollQuotesHandler.postDelayed(this, 30000);
+            pollQuotesHandler.postDelayed (this, 25000);
         }
     };
 
@@ -203,9 +196,7 @@ public class BackgroundListenerService extends WearableListenerService {
         stockListDB = StockListDB.getInstance (getApplicationContext ());
 
         //
-        // Issue the notification
-        notificationManager =
-                NotificationManagerCompat.from(this);
+
     }
 
     private void getHistoricalData() {
@@ -216,52 +207,7 @@ public class BackgroundListenerService extends WearableListenerService {
         }
     }
 
-    private void pushNotification (String stockCode, String stockName, String changePct) {
 
-        Intent resultIntent = new Intent(this, MainActivity.class);
-
-        // Because clicking the notification opens a new ("special") activity, there's
-        // no need to create an artificial back stack.
-        PendingIntent resultPendingIntent =
-                PendingIntent.getActivity(
-                        this,
-                        0,
-                        resultIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT
-                );
-
-        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.mipmap.stockmarket);
-
-        Notification notif = new NotificationCompat.Builder(getApplicationContext())
-                .setContentTitle(stockName)
-                .setContentText("has changed " + changePct)
-                .setLargeIcon(icon)
-                .setSmallIcon(R.mipmap.stockmarket)
-                .setGroup("STOCKS")
-                .setGroupSummary(true)
-                .setVibrate(new long[]{1, 300, 2000})
-                .setContentIntent(resultPendingIntent)
-                .build();
-
-
-
-        // Sets an ID for the notification
-        int mNotificationId = stockName.hashCode ();
-        // Gets an instance of the NotificationManager service
-       /* NotificationManager mNotifyMgr =
-                (NotificationManager) getSystemService (NOTIFICATION_SERVICE);
-        // Builds the notification and issues it.
-*/
-
-        String change = changePct.replaceAll("[%+]", "");
-        float theChange = Float.parseFloat(change);
-
-        if (theChange > 2.0 || theChange < -2.0) {
-            if (!stockListDB.isNotifySuspended(mNotificationId)) {
-                notificationManager.notify(mNotificationId, notif);
-            }
-        }
-    }
 
     private Node getNode() {
         HashSet<String> results = new HashSet<String>();
@@ -351,8 +297,7 @@ public class BackgroundListenerService extends WearableListenerService {
                 conn.setRequestMethod("GET");
 
                 if (conn.getResponseCode() != 200) {
-                    throw new RuntimeException("Failed : HTTP error code : "
-                            + conn.getResponseCode() + urls[0]);
+                    return "";
                 }
 
                 BufferedReader br = new BufferedReader(new InputStreamReader(
@@ -375,6 +320,10 @@ public class BackgroundListenerService extends WearableListenerService {
         @Override
         protected void onPostExecute(String json2Parse) {
 
+            if ("".equals (json2Parse)) {
+                return;
+            }
+
             JSONObject jsonObj = null;
             String stockCode = json2Parse.split (":::")[1].split ("###")[0];
             try {
@@ -387,11 +336,6 @@ public class BackgroundListenerService extends WearableListenerService {
 
                 StockListDB.getInstance (getApplicationContext ())
                         .updateLiveData (stockCode, jsonQueryObj.toString (), name.hashCode ());
-
-                if (deltaRatePercent != null || !deltaRatePercent.equals ("null")) {
-                    pushNotification (stockCode, name, deltaRatePercent);
-                }
-
 
 
             } catch (JSONException e) {

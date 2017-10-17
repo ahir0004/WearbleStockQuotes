@@ -1,11 +1,17 @@
 package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
 import android.app.Activity;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.text.format.Time;
 import android.util.Log;
 import android.view.View;
@@ -55,7 +61,7 @@ public class MainActivity extends Activity implements
     private Handler handler = new Handler ();
     private Handler pollQuotes = new Handler ();
     private String nodeId;
-
+    private NotificationManagerCompat notificationManager;
     private Runnable pollQuotesRunnable = new Runnable () {
         @Override
         public void run () {
@@ -88,6 +94,10 @@ public class MainActivity extends Activity implements
         startService (theServiceIntent);
 
         setContentView (R.layout.activity_main);
+
+        // Issue the notification
+        notificationManager =
+                NotificationManagerCompat.from (this);
 
         listView = (StockListView) findViewById (R.id.list);
         listView.isOnItemClickable (true);
@@ -208,18 +218,25 @@ public class MainActivity extends Activity implements
                 JSONObject jsonQueryObj = new JSONObject (jsonData);
                 String symbol = jsonQueryObj.getString ("Symbol");
                 String ltp = jsonQueryObj.getString ("LastTradePriceOnly");
+                String deltaRatePercent = jsonQueryObj.getString ("PercentChange");
+                String name = jsonQueryObj.getString ("Name");
+
                 StringBuilder sb = new StringBuilder ();
-                sb.append (jsonQueryObj.getString ("Name"));
+                sb.append (name);
                 sb.append ("\n");
                 sb.append (ltp);
                 sb.append ("   ");
                 sb.append (jsonQueryObj.getString ("Change"));
                 sb.append (" / ");
-                sb.append (jsonQueryObj.getString ("PercentChange"));
+                sb.append (deltaRatePercent);
                 sb.append ("\n");
                 sb.append ("RSI: ");
                 sb.append (new RSI (14, symbol, stockListDB, ltp).calculate ());
                 theArrayList.add (sb.toString ());
+
+                if (deltaRatePercent != null || !deltaRatePercent.equals ("null")) {
+                    pushNotification (symbol, name, deltaRatePercent);
+                }
 
             } catch (JSONException e) {
                 e.printStackTrace ();
@@ -363,6 +380,50 @@ public class MainActivity extends Activity implements
 
     }
 
+    private void pushNotification (String stockCode, String stockName, String changePct) {
 
+        Intent resultIntent = new Intent (this, MainActivity.class);
+
+        // Because clicking the notification opens a new ("special") activity, there's
+        // no need to create an artificial back stack.
+        PendingIntent resultPendingIntent =
+                PendingIntent.getActivity (
+                        this,
+                        0,
+                        resultIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+        Bitmap icon = BitmapFactory.decodeResource (getResources (), R.mipmap.stockmarket);
+
+        Notification notif = new NotificationCompat.Builder (getApplicationContext ())
+                .setContentTitle (stockName)
+                .setContentText ("has changed " + changePct)
+                .setLargeIcon (icon)
+                .setSmallIcon (R.mipmap.stockmarket)
+                .setGroup ("STOCKS")
+                .setGroupSummary (true)
+                .setVibrate (new long[]{1, 300, 2000})
+                .setContentIntent (resultPendingIntent)
+                .build ();
+
+
+        // Sets an ID for the notification
+        int mNotificationId = stockName.hashCode ();
+        // Gets an instance of the NotificationManager service
+       /* NotificationManager mNotifyMgr =
+                (NotificationManager) getSystemService (NOTIFICATION_SERVICE);
+        // Builds the notification and issues it.
+*/
+
+        String change = changePct.replaceAll ("[%+]", "");
+        float theChange = Float.parseFloat (change);
+
+        if (theChange > 2.0 || theChange < -2.0) {
+            if (!stockListDB.isNotifySuspended (mNotificationId)) {
+                notificationManager.notify (mNotificationId, notif);
+            }
+        }
+    }
 
 }
