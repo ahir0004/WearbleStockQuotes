@@ -18,7 +18,7 @@
         android:layout_weight=".25"
         android:gravity="center"
         android:text="@string/headline"
-        android:textColor="@color/white"/>
+        android:textColor="@android:color/white"/>
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -47,6 +47,6 @@
         android:background="@android:color/background_dark"
         android:gravity="center"
         android:scrollbars="vertical"
-        android:textColor="@color/white"/>
+        android:textColor="@android:color/white"/>
 
 </LinearLayout>

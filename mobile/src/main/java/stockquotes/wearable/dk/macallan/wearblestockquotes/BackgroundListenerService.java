@@ -54,6 +54,7 @@ public class BackgroundListenerService extends WearableListenerService {
     private List<Node> nodes;
     private StockListDB stockListDB;
     private NotificationManagerCompat notificationManager;
+
     private Runnable pollQuotesRunnable = new Runnable() {
         @Override
         public void run() {
@@ -96,21 +97,48 @@ public class BackgroundListenerService extends WearableListenerService {
         // (in this case the title and the content of the notification) will be different for almost all
         // situations. However, in this example, the text and the content are always the same, so we need
         // to disambiguate the data item by adding a field that contains teh current time in milliseconds.
+/*
 
+        JSONObject jsonQueryObj = jsonObj.getJSONObject("query").getJSONObject("results").getJSONObject("quote");
 
+        String name = jsonQueryObj.getString("Name");
+        String rate = jsonQueryObj.getString("LastTradePriceOnly");
+        String deltaRate = jsonQueryObj.getString("Change");
+        String deltaRatePercent = jsonQueryObj.getString("PercentChange");
+
+        getRequestCodes ()
+*/
         ArrayList<String> theArrayList = new ArrayList<String> ();
+        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
 
-        for (String str : getQuotesArrayList ()) {
+        while (cursor.moveToNext ()) {
 
-            theArrayList.add (str);
+
+            JSONObject jsonQueryObj = null;
+            try {
+                jsonQueryObj = new JSONObject (cursor.getString (4));
+
+                StringBuilder sb = new StringBuilder ();
+                sb.append (jsonQueryObj.getString ("Name"));
+                sb.append ("\n");
+                sb.append (jsonQueryObj.getString ("LastTradePriceOnly"));
+                sb.append ("   ");
+                sb.append (jsonQueryObj.getString ("Change"));
+                sb.append (" / ");
+                sb.append (jsonQueryObj.getString ("PercentChange"));
+
+                theArrayList.add (sb.toString ());
+
+            } catch (JSONException e) {
+                e.printStackTrace ();
+            }
+
         }
-
 
         dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, theArrayList);
         PutDataRequest putDataRequest = dataMapRequest.asPutDataRequest();
 
         Wearable.DataApi.putDataItem(client, putDataRequest);
-
     }
 
     private synchronized List<String> getQuotesArrayList () {
@@ -144,7 +172,7 @@ public class BackgroundListenerService extends WearableListenerService {
                 Wearable.MessageApi.addListener(client, BackgroundListenerService.this);
 //                retrieveDeviceNode();
                 //sendMessage ("path", "BLABLA");
-                sendNotification();
+
             }
 
             @Override
@@ -163,6 +191,7 @@ public class BackgroundListenerService extends WearableListenerService {
         client.connect();
         Toast.makeText(BackgroundListenerService.this, " TOAST_FROM_SERVICE", Toast.LENGTH_LONG);
 
+        //getNode();
         return START_STICKY;
     }
 
@@ -187,7 +216,7 @@ public class BackgroundListenerService extends WearableListenerService {
         }
     }
 
-    private void pushNotification(int index, String stockName, String changePct) {
+    private void pushNotification (String stockCode, String stockName, String changePct) {
 
         Intent resultIntent = new Intent(this, MainActivity.class);
 
@@ -214,17 +243,15 @@ public class BackgroundListenerService extends WearableListenerService {
                 .setContentIntent(resultPendingIntent)
                 .build();
 
-        String stockId = getRequestCodes()[index - 1].split("::")[0];
+
 
         // Sets an ID for the notification
-        int mNotificationId = Integer.valueOf(stockId);
+        int mNotificationId = stockName.hashCode ();
         // Gets an instance of the NotificationManager service
        /* NotificationManager mNotifyMgr =
                 (NotificationManager) getSystemService (NOTIFICATION_SERVICE);
         // Builds the notification and issues it.
 */
-        if (changePct == null || changePct.equals("null"))
-            return;
 
         String change = changePct.replaceAll("[%+]", "");
         float theChange = Float.parseFloat(change);
@@ -275,7 +302,7 @@ public class BackgroundListenerService extends WearableListenerService {
 
         for (int i = 0; i < reqCodes.length; i++) {
             BackgroundListenerService.DownloadWebPageTask task = new BackgroundListenerService.DownloadWebPageTask();
-            task.execute(reqCodes[i]);
+            task.execute (reqCodes[i], String.valueOf (i));
         }
     }
 
@@ -336,6 +363,7 @@ public class BackgroundListenerService extends WearableListenerService {
                 while ((output = br.readLine()) != null) {
                     chunks.append(output);
                 }
+                chunks.append (":::").append (urls[0]);
                 conn.disconnect();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -348,39 +376,23 @@ public class BackgroundListenerService extends WearableListenerService {
         protected void onPostExecute(String json2Parse) {
 
             JSONObject jsonObj = null;
+            String stockCode = json2Parse.split (":::")[1].split ("###")[0];
             try {
-                jsonObj = new JSONObject(json2Parse);
+                jsonObj = new JSONObject (json2Parse.split (":::")[0]);
 
                 JSONObject jsonQueryObj = jsonObj.getJSONObject("query").getJSONObject("results").getJSONObject("quote");
 
                 String name = jsonQueryObj.getString("Name");
-                String rate = jsonQueryObj.getString("LastTradePriceOnly");
-                String deltaRate = jsonQueryObj.getString("Change");
                 String deltaRatePercent = jsonQueryObj.getString("PercentChange");
 
-                final String separator = "::";
-                synchronized (quotesArrayList) {
-                    // ArrayList<String> listOfQuotes = new ArrayList<> ();
-                    quotesArrayList.add (new StringBuilder (name)
-                            .append (separator)
-                            .append (rate)
-                            .append (separator)
-                            .append (deltaRate)
-                            .append (separator)
-                            .append (deltaRatePercent)
-                            .append (separator)
-                            .append (getRSI (quotesArrayList.size (), rate))
-                            .toString ());
+                StockListDB.getInstance (getApplicationContext ())
+                        .updateLiveData (stockCode, jsonQueryObj.toString (), name.hashCode ());
 
-                    pushNotification (quotesArrayList.size (), name, deltaRatePercent);
-
-                    int lengthReqCodes = getStockRequestCodes ().length;
-                    int sizeOfQuoteArraylist = quotesArrayList.size ();
-
-                    if (lengthReqCodes == sizeOfQuoteArraylist) {
-                        sendNotification ();
-                    }
+                if (deltaRatePercent != null || !deltaRatePercent.equals ("null")) {
+                    pushNotification (stockCode, name, deltaRatePercent);
                 }
+
+
 
             } catch (JSONException e) {
                 e.printStackTrace();

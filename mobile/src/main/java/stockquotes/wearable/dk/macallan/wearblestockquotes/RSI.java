@@ -54,7 +54,6 @@ public class RSI {
 
     public String calculate () {
 
-
         if (prices.size () == 0)
             return "";
 
@@ -75,9 +74,7 @@ public class RSI {
         gains = Math.max (0, change);
         losses = Math.max (0, -change);
 
-//        for (int i = 2 ; i < pricesSize ; i++){
         int i = 2;
-
 
         while (i < pricesSize) {
 

@@ -36,7 +36,8 @@ public class StockListDB extends SQLiteOpenHelper {
     @Override
     public void onCreate (SQLiteDatabase db) {
         db.execSQL ("CREATE TABLE STOCK_QUOTES ( _ID INTEGER PRIMARY KEY AUTOINCREMENT, STOCK_CODE, " +
-                "SUSPEND_NOTIFICATION integer, UNIQUE (STOCK_CODE) ON CONFLICT ABORT );");
+                "SUSPEND_NOTIFICATION integer, " +
+                "HASHED_NAME integer, LIVE_DATA text, UNIQUE (STOCK_CODE) ON CONFLICT ABORT );");
 
         db.execSQL ("CREATE TABLE HIST_STOCK_QUOTES (HIST_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "TRADE_DATE numeric, " +
@@ -45,7 +46,6 @@ public class StockListDB extends SQLiteOpenHelper {
                 "INSERT_DATE numeric, " +
                 "UNIQUE(TRADE_DATE, JSON_OBJECT, STOCK_ID) ON CONFLICT ABORT," +
                 "FOREIGN KEY (STOCK_ID) REFERENCES STOCK_QUOTES(_ID));");
-
     }
 
     @Override
@@ -69,13 +69,26 @@ public class StockListDB extends SQLiteOpenHelper {
         return rowID;
     }
 
-    protected void update (String stockID, int isSuspended) {
+    protected void updateLiveData (String stockCode, String jsonData, int hashedName) {
+
+        ContentValues values = new ContentValues ();
+        values.put ("LIVE_DATA", jsonData);
+        values.put ("HASHED_NAME", hashedName);
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase ();
+        sqLiteDatabase.beginTransaction ();
+        sqLiteDatabase.update ("STOCK_QUOTES", values, "STOCK_CODE = \'" + stockCode + "\'", null);
+        sqLiteDatabase.setTransactionSuccessful ();
+        sqLiteDatabase.endTransaction ();
+
+    }
+
+    protected void updateSuspendNotification (int stockNameHash, int isSuspended) {
 
         ContentValues values = new ContentValues ();
         values.put ("SUSPEND_NOTIFICATION", isSuspended);
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase ();
         sqLiteDatabase.beginTransaction ();
-        sqLiteDatabase.update ("STOCK_QUOTES", values, "_ID =" + stockID, null);
+        sqLiteDatabase.update ("STOCK_QUOTES", values, "HASHED_NAME =" + stockNameHash, null);
         sqLiteDatabase.setTransactionSuccessful ();
         sqLiteDatabase.endTransaction ();
 
@@ -141,10 +154,28 @@ public class StockListDB extends SQLiteOpenHelper {
         return readableDatabase.rawQuery ("SELECT * FROM STOCK_QUOTES", null);
     }
 
-    protected Cursor readSuspendedNotification (String stockId) {
+    protected long getIdFromStockCode (String code) {
+        SQLiteDatabase readableDatabase = this.getReadableDatabase ();
+        Cursor cursor = readableDatabase.rawQuery ("SELECT _ID FROM STOCK_QUOTES where STOCK_CODE = \'" + code + "\'", null);
+
+        long id = 0l;
+
+        while (cursor.moveToNext ()) {
+            id = cursor.getLong (0);
+        }
+        return id;
+    }
+
+    protected Cursor readSuspendedNotification (String stockNameHash) {
+        SQLiteDatabase readableDatabase = this.getReadableDatabase ();
+        return readableDatabase.rawQuery ("SELECT SUSPEND_NOTIFICATION FROM STOCK_QUOTES WHERE HASHED_NAME =" + stockNameHash, null);
+    }
+
+    protected Cursor readSuspendedNotificationById (String stockId) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
         return readableDatabase.rawQuery ("SELECT SUSPEND_NOTIFICATION FROM STOCK_QUOTES WHERE _ID=" + stockId, null);
     }
+
 /*
     protected void removeHistStockDataFromDB () {
         SQLiteDatabase writableDatabase = this.getWritableDatabase ();
@@ -163,8 +194,8 @@ public class StockListDB extends SQLiteOpenHelper {
         writableDatabase.endTransaction ();
     }
 
-    protected boolean isNotifySuspended (int stockId) {
-        Cursor cursor = this.readSuspendedNotification (String.valueOf (stockId));
+    protected boolean isNotifySuspended (int stockNameHash) {
+        Cursor cursor = this.readSuspendedNotification (String.valueOf (stockNameHash));
 
         int isSuspended = 0;
 

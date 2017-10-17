@@ -42,18 +42,20 @@ public class AddStockActivity extends Activity {
         addStockbutton.setOnClickListener (new View.OnClickListener () {
             @Override
             public void onClick (View v) {
-                String input = editText.getText ().toString ().toUpperCase ();
+                String stockCode = editText.getText ().toString ().toUpperCase ();
                 // String[] codes = input.split ("\\.");
 
                 editText.setText ("");
 
-                long id = stockListDB.insert (input);
+                stockListDB.insert (stockCode);
+                long id = stockListDB.getIdFromStockCode (stockCode);
+
 
                 if (id != -1l) {
                     hideKeyboard ();
                     listView.initList ();
                     HistoricalDataTask hdt = new HistoricalDataTask (getApplicationContext ());
-                    hdt.execute (id + "::" + input);
+                    hdt.execute (id + "::" + stockCode);
                 }
 
             }

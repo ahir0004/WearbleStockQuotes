@@ -2,6 +2,7 @@ package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -28,6 +29,9 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 
 public class MainActivity extends Activity implements
@@ -49,8 +53,29 @@ public class MainActivity extends Activity implements
      */
     private GoogleApiClient client;
     private Handler handler = new Handler ();
+    private Handler pollQuotes = new Handler ();
     private String nodeId;
 
+    private Runnable pollQuotesRunnable = new Runnable () {
+        @Override
+        public void run () {
+
+
+            refreshList ();
+
+            pollQuotes.postDelayed (this, 30000);
+        }
+    };
+
+    private void refreshList () {
+
+        listView.getAdapter ().clear ();
+
+        for (String quote : getQuotes ()) {
+            listView.getAdapter ().add (quote);
+        }
+        listView.populateListView ();
+    }
 
     @Override
     protected void onCreate (Bundle savedInstanceState) {
@@ -85,18 +110,19 @@ public class MainActivity extends Activity implements
                 @Override
                 public boolean onItemLongClick (AdapterView<?> parent, View view, int position, long id) {
 
-                    String stockId = listView.getRequestCodes ()[position].split (":")[0];
-                    StringBuilder sb = new StringBuilder (parent.getItemAtPosition (position).toString ().split ("\n")[0]);
+                    String stockName = parent.getItemAtPosition (position).toString ().split ("\n")[0];
+                    StringBuilder sb = new StringBuilder (stockName);
 
 
-                    if (stockListDB.isNotifySuspended (Integer.valueOf (stockId))) {
-                        stockListDB.update (stockId, 0);
+                    if (stockListDB.isNotifySuspended (stockName.hashCode ())) {
+
+                        stockListDB.updateSuspendNotification (stockName.hashCode (), 0);
                         view.getBackground ().setAlpha (255);
                         sb.append (" has enabled notifications.");
 
                     } else {
-                        stockListDB.update (stockId, 1);
-                        view.getBackground ().setAlpha (100);
+                        stockListDB.updateSuspendNotification (stockName.hashCode (), 1);
+                        view.getBackground ().setAlpha (150);
                         sb.append (" has suspended notifications.");
 
                     }
@@ -109,16 +135,17 @@ public class MainActivity extends Activity implements
                 }
             });
 
-        listView.initList ();
-
+        refreshList ();
         Button refreshButton = (Button) findViewById (R.id.refresh_button);
         if (refreshButton != null) {
             refreshButton.setOnClickListener (new View.OnClickListener () {
                 @Override
                 public void onClick (View view) {
-                    listView.populateListView ();
+                    MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage (
+                            client, "ce7d7706", "SEND_DATA", "AllanwasHere".getBytes ()).await ();
                 }
-            });
+                                              }
+            );
         }
         final EditText txtUrl = new EditText (this);
         final ImageButton add_stock_button = (ImageButton) findViewById (R.id.add_stock_button);
@@ -138,6 +165,8 @@ public class MainActivity extends Activity implements
                 .addOnConnectionFailedListener (this)
                 .build ();
 
+        pollQuotes.postDelayed (pollQuotesRunnable, 1000);
+
     }
 
 
@@ -148,8 +177,7 @@ public class MainActivity extends Activity implements
         if (client.isConnected ()) {
             Toast.makeText (this, "OnResume", Toast.LENGTH_LONG);
         }
-        listView.populateListView ();
-
+        refreshList ();
     }
 
     @Override
@@ -163,6 +191,44 @@ public class MainActivity extends Activity implements
         super.onPause ();
     }
 
+    private ArrayList<String> getQuotes () {
+
+        ArrayList<String> theArrayList = new ArrayList<String> ();
+        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
+
+        while (cursor.moveToNext ()) {
+
+
+            String jsonData = cursor.getString (4);
+
+            if (jsonData == null || "null".equalsIgnoreCase (jsonData))
+                continue;
+
+            try {
+                JSONObject jsonQueryObj = new JSONObject (jsonData);
+                String symbol = jsonQueryObj.getString ("Symbol");
+                String ltp = jsonQueryObj.getString ("LastTradePriceOnly");
+                StringBuilder sb = new StringBuilder ();
+                sb.append (jsonQueryObj.getString ("Name"));
+                sb.append ("\n");
+                sb.append (ltp);
+                sb.append ("   ");
+                sb.append (jsonQueryObj.getString ("Change"));
+                sb.append (" / ");
+                sb.append (jsonQueryObj.getString ("PercentChange"));
+                sb.append ("\n");
+                sb.append ("RSI: ");
+                sb.append (new RSI (14, symbol, stockListDB, ltp).calculate ());
+                theArrayList.add (sb.toString ());
+
+            } catch (JSONException e) {
+                e.printStackTrace ();
+                break;
+            }
+
+        }
+        return theArrayList;
+    }
 
     private void sendNotification () {
 
@@ -246,20 +312,11 @@ public class MainActivity extends Activity implements
                     listView.getAdapter ().clear ();
                     int index = 0;
                     for (String quote : quotesList) {
-                        String[] quoteChunks = quote.split ("::");
 
                         //double rate =  Double.parseDouble (quoteChunks[1]);
 
-                        listView.getAdapter ().add (new StringBuilder (quoteChunks[0])
-                                .append (" \n")
-                                .append (quoteChunks[1])
-                                .append (": \t")
-                                .append (quoteChunks[2])
-                                .append (" / ")
-                                .append (quoteChunks[3])
-                                .append ("                 RSI_14: ")
-                                .append (quoteChunks[4])
-                                .toString ())
+                        listView.getAdapter ().add (quote)
+
                         ;
 
 
