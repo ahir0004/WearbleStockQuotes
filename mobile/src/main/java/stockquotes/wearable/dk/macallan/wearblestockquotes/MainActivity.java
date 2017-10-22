@@ -12,7 +12,6 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
-import android.text.format.Time;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -62,6 +61,7 @@ public class MainActivity extends Activity implements
     private Handler pollQuotes = new Handler ();
     private String nodeId;
     private NotificationManagerCompat notificationManager;
+    private String lastTradeTime;
     private Runnable pollQuotesRunnable = new Runnable () {
         @Override
         public void run () {
@@ -81,6 +81,7 @@ public class MainActivity extends Activity implements
             listView.getAdapter ().add (quote);
         }
         listView.populateListView ();
+        ((TextView) findViewById(R.id.lastUpdated)).setText("Last update: \n" + lastTradeTime);
     }
 
     @Override
@@ -221,6 +222,8 @@ public class MainActivity extends Activity implements
                 String deltaRatePercent = jsonQueryObj.getString ("PercentChange");
                 String name = jsonQueryObj.getString ("Name");
 
+                lastTradeTime = jsonQueryObj.getString("LastTradeTime");
+
                 StringBuilder sb = new StringBuilder ();
                 sb.append (name);
                 sb.append ("\n");
@@ -339,11 +342,8 @@ public class MainActivity extends Activity implements
 
                     }
                     listView.populateListView ();
-                    Time now = new Time ();
-                    now.setToNow ();
-                    String lastUdate = now.format ("%H:%M:%S");
 
-                    ((TextView) findViewById (R.id.lastUpdated)).setText ("Last update: \n" + lastUdate);
+                    ((TextView) findViewById(R.id.lastUpdated)).setText("Last update: \n" + lastTradeTime);
 
                 }
             }

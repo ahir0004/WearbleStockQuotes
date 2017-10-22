@@ -108,8 +108,11 @@ public class GraphActivity extends Activity {
             JSONObject jsonObj = new JSONObject (jsonObjects.get (i));
 
             try {
-                String close = jsonObj.get ("close").toString ();
-                stockValues.add (new Double (close));
+                String close = jsonObj.getString("close");
+                if ("null".equals(close))
+                    stockValues.add(0.0);
+                else
+                    stockValues.add(new Double(close));
             } catch (JSONException e) {
                 continue;
             }
