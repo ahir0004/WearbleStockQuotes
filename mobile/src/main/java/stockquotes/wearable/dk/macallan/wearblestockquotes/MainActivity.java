@@ -18,7 +18,6 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -61,7 +60,6 @@ public class MainActivity extends Activity implements
     private Handler pollQuotes = new Handler ();
     private String nodeId;
     private NotificationManagerCompat notificationManager;
-    private String lastTradeTime;
     private Runnable pollQuotesRunnable = new Runnable () {
         @Override
         public void run () {
@@ -81,7 +79,7 @@ public class MainActivity extends Activity implements
             listView.getAdapter ().add (quote);
         }
         listView.populateListView ();
-        ((TextView) findViewById(R.id.lastUpdated)).setText("Last update: \n" + lastTradeTime);
+
     }
 
     @Override
@@ -152,8 +150,10 @@ public class MainActivity extends Activity implements
             refreshButton.setOnClickListener (new View.OnClickListener () {
                 @Override
                 public void onClick (View view) {
-                    MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage (
+                    /*MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage (
                             client, "ce7d7706", "SEND_DATA", "AllanwasHere".getBytes ()).await ();
+                */
+                    refreshList();
                 }
                                               }
             );
@@ -222,7 +222,7 @@ public class MainActivity extends Activity implements
                 String deltaRatePercent = jsonQueryObj.getString ("PercentChange");
                 String name = jsonQueryObj.getString ("Name");
 
-                lastTradeTime = jsonQueryObj.getString("LastTradeTime");
+                String lastTradeTime = jsonQueryObj.getString("LastTradeTime");
 
                 StringBuilder sb = new StringBuilder ();
                 sb.append (name);
@@ -235,6 +235,10 @@ public class MainActivity extends Activity implements
                 sb.append ("\n");
                 sb.append ("RSI: ");
                 sb.append (new RSI (14, symbol, stockListDB, ltp).calculate ());
+                sb.append("\n");
+                sb.append("LTT: ");
+                sb.append(lastTradeTime);
+
                 theArrayList.add (sb.toString ());
 
                 if (deltaRatePercent != null || !deltaRatePercent.equals ("null")) {
@@ -343,7 +347,6 @@ public class MainActivity extends Activity implements
                     }
                     listView.populateListView ();
 
-                    ((TextView) findViewById(R.id.lastUpdated)).setText("Last update: \n" + lastTradeTime);
 
                 }
             }
