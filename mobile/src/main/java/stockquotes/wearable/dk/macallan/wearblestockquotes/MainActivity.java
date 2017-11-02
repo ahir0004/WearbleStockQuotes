@@ -20,12 +20,11 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
-import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.MessageApi;
 import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.NodeApi;
@@ -33,10 +32,15 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import org.joda.time.DateTime;
+import org.joda.time.LocalTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MainActivity extends Activity implements
         GoogleApiClient.ConnectionCallbacks,
@@ -48,8 +52,8 @@ public class MainActivity extends Activity implements
     private static final String NOTIFICATION_CONTENT = "content";
     private static final String TAG = "PhoneActivity";
     StockListDB stockListDB;
-
     StockListView listView;
+    private AdView mAdView;
     private String[] stockRequestCodes;
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
@@ -75,7 +79,7 @@ public class MainActivity extends Activity implements
 
         listView.getAdapter ().clear ();
 
-        for (String quote : getQuotes ()) {
+        for (HashMap quote : getQuotes ()) {
             listView.getAdapter ().add (quote);
         }
         listView.populateListView ();
@@ -93,6 +97,9 @@ public class MainActivity extends Activity implements
         startService (theServiceIntent);
 
         setContentView (R.layout.activity_main);
+        /*mAdView = (AdView) findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);*/
 
         // Issue the notification
         notificationManager =
@@ -106,8 +113,10 @@ public class MainActivity extends Activity implements
             public void onItemClick (AdapterView<?> parent, View view, int position, long id) {
                 try {
                     Intent graphIntent = new Intent (MainActivity.this, GraphActivity.class);
-                    graphIntent.putExtra ("STOCK_NAME", parent.getItemAtPosition (position).toString ());
+                    graphIntent.putExtra ("STOCK_NAME", listView.getAdapter ().getItem (position).get ("NAME"));
                     graphIntent.putExtra ("STOCK_CODE", listView.getRequestCodes ()[position]);
+                    graphIntent.putExtra ("RSI", listView.getAdapter ().getItem (position).get ("RSI"));
+
                     startActivity (graphIntent);
                 } catch (Exception e) {
                     e.printStackTrace ();
@@ -121,7 +130,6 @@ public class MainActivity extends Activity implements
 
                     String stockName = parent.getItemAtPosition (position).toString ().split ("\n")[0];
                     StringBuilder sb = new StringBuilder (stockName);
-
 
                     if (stockListDB.isNotifySuspended (stockName.hashCode ())) {
 
@@ -202,13 +210,13 @@ public class MainActivity extends Activity implements
         super.onPause ();
     }
 
-    private ArrayList<String> getQuotes () {
+    private ArrayList<HashMap<String, String>> getQuotes () {
 
-        ArrayList<String> theArrayList = new ArrayList<String> ();
+        ArrayList<HashMap<String, String>> theArrayList = new ArrayList<> ();
         Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
-
         while (cursor.moveToNext ()) {
 
+            HashMap<String, String> theMap = new HashMap<String, String> ();
 
             String jsonData = cursor.getString (4);
 
@@ -224,22 +232,14 @@ public class MainActivity extends Activity implements
 
                 String lastTradeTime = jsonQueryObj.getString("LastTradeTime");
 
-                StringBuilder sb = new StringBuilder ();
-                sb.append (name);
-                sb.append ("\n");
-                sb.append (ltp);
-                sb.append ("   ");
-                sb.append (jsonQueryObj.getString ("Change"));
-                sb.append (" / ");
-                sb.append (deltaRatePercent);
-                sb.append ("\n");
-                sb.append ("RSI: ");
-                sb.append (new RSI (14, symbol, stockListDB, ltp).calculate ());
-                sb.append("\n");
-                sb.append("LTT: ");
-                sb.append(lastTradeTime);
+                theMap.put ("NAME", name);
+                theMap.put ("LTP", ltp);
+                theMap.put ("LTT", lastTradeTime);
+                theMap.put ("CHANGE", jsonQueryObj.getString ("Change"));
+                theMap.put ("CHANGE_PCT", deltaRatePercent);
+                theMap.put ("RSI", new RSI (14, symbol, stockListDB, ltp).calculate ());
 
-                theArrayList.add (sb.toString ());
+                theArrayList.add (theMap);
 
                 if (deltaRatePercent != null || !deltaRatePercent.equals ("null")) {
                     pushNotification (symbol, name, deltaRatePercent);
@@ -251,6 +251,11 @@ public class MainActivity extends Activity implements
             }
 
         }
+        DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm:ss");
+        LocalTime lastUpdate = new DateTime ().toLocalTime ();
+
+        // ((TextView) findViewById (R.id.lastUpdated)).setText ("Last update: \n" + fmt.print (lastUpdate));
+
         return theArrayList;
     }
 
@@ -323,6 +328,7 @@ public class MainActivity extends Activity implements
 
     @Override
     public void onDataChanged (DataEventBuffer dataEvents) {
+/*
 
         try {
             for (DataEvent event : dataEvents) {
@@ -355,6 +361,7 @@ public class MainActivity extends Activity implements
         } catch (Exception e) {
             e.printStackTrace ();
         }
+*/
     }
 
 
@@ -387,8 +394,6 @@ public class MainActivity extends Activity implements
 
         Intent resultIntent = new Intent (this, MainActivity.class);
 
-        // Because clicking the notification opens a new ("special") activity, there's
-        // no need to create an artificial back stack.
         PendingIntent resultPendingIntent =
                 PendingIntent.getActivity (
                         this,
@@ -412,19 +417,14 @@ public class MainActivity extends Activity implements
 
 
         // Sets an ID for the notification
-        int mNotificationId = stockName.hashCode ();
-        // Gets an instance of the NotificationManager service
-       /* NotificationManager mNotifyMgr =
-                (NotificationManager) getSystemService (NOTIFICATION_SERVICE);
-        // Builds the notification and issues it.
-*/
+        int notificationId = stockName.hashCode ();
 
         String change = changePct.replaceAll ("[%+]", "");
         float theChange = Float.parseFloat (change);
 
         if (theChange > 2.0 || theChange < -2.0) {
-            if (!stockListDB.isNotifySuspended (mNotificationId)) {
-                notificationManager.notify (mNotificationId, notif);
+            if (!stockListDB.isNotifySuspended (notificationId)) {
+                notificationManager.notify (notificationId, notif);
             }
         }
     }

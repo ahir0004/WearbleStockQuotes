@@ -33,6 +33,7 @@ android {
 }
 
 dependencies {
+    implementation 'com.google.firebase:firebase-ads:11.0.4'
     compile fileTree(include: ['*.jar'], dir: 'libs')
     wearApp project(':wear')
     testCompile 'junit:junit:4.12'
@@ -50,3 +51,6 @@ dependencies {
     compile 'com.android.support:mediarouter-v7:25.3.1'
 }
 
+
+
+apply plugin: 'com.google.gms.google-services'

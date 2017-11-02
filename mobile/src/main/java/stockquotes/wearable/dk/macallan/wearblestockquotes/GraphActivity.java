@@ -47,6 +47,7 @@ public class GraphActivity extends Activity {
     private String stockId;
     private int i = 0;
     private ArrayList<DateTime> stockDates;
+    private String rsi;
 
 
     public void shiftPeriod (View view) {
@@ -76,6 +77,7 @@ public class GraphActivity extends Activity {
         graphViewFrameLayout = (FrameLayout) findViewById (R.id.graph_view_framelayout);
         stockName = getIntent ().getStringExtra ("STOCK_NAME").split ("\n")[0];
         stockId = getIntent ().getStringExtra ("STOCK_CODE").split (":")[0].trim ();
+        rsi = getIntent ().getStringExtra ("RSI");
         days2Chart = getIntent ().getIntExtra ("chartDays", 5);
 
         try {
@@ -227,7 +229,10 @@ public class GraphActivity extends Activity {
         setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         TextView headLine = (TextView) findViewById (R.id.headline_textView);
-        headLine.setText (stockName.toUpperCase () + " (" + days2Chart + " days)");
+
+        //String rsi = new RSI (14, stockCode, StockListDB.getInstance (getBaseContext ()), "").calculate ();
+
+        headLine.setText (stockName.toUpperCase () + " (" + days2Chart + " days)         RSI: " + rsi);
         headLine.setTextColor (Color.YELLOW);
         headLine.setTextSize (25.0f);
         headLine.setGravity (Gravity.CENTER_HORIZONTAL);

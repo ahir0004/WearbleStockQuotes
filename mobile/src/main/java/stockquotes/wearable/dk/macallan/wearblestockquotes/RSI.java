@@ -24,7 +24,7 @@ public class RSI {
         this.periodLength = periodLength;
         avgList = new ArrayList<Averages> ();
         prices = getPrices (symbol, db);
-        if (prices.size () > 0)
+        if (!"".equals (latestDayRate) && prices.size () > 0)
             prices.add (Double.parseDouble (latestDayRate));
 
     }

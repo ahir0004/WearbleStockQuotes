@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "471916712777",
+    "firebase_url": "https://wearblestockquotes.firebaseio.com",
+    "project_id": "wearblestockquotes",
+    "storage_bucket": "wearblestockquotes.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:471916712777:android:1cb9dea712b0f724",
+        "android_client_info": {
+          "package_name": "stockquotes.wearable.dk.macallan.wearblestockquotes"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "471916712777-i7n488dpllhc0jk9ijm6kp2af2bl2ufb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "stockquotes.wearable.dk.macallan.wearblestockquotes",
+            "certificate_hash": "035f1d13b7ede313cd05979fd6cc2f9f7e74b781"
+          }
+        },
+        {
+          "client_id": "471916712777-d4eq3shnnvk8denb5j96c7uu6v5dr6ih.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyrk6NfhwkuoT9ankqdN-mRLjDCYW3mPI"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "471916712777-d4eq3shnnvk8denb5j96c7uu6v5dr6ih.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

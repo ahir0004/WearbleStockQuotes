@@ -297,6 +297,7 @@ public class BackgroundListenerService extends WearableListenerService {
                 conn.setRequestMethod("GET");
 
                 if (conn.getResponseCode() != 200) {
+                    Toast.makeText (getApplicationContext (), "NO YAHOO CONNECTION!", Toast.LENGTH_LONG).show ();
                     return "";
                 }
 

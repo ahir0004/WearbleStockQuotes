@@ -185,11 +185,11 @@ public class StockListDB extends SQLiteOpenHelper {
         writableDatabase.endTransaction ();
     }*/
 
-    protected void removeStockFromDB (String stockListId) {
+    protected void removeStockFromDB (String stockCode) {
         SQLiteDatabase writableDatabase = this.getWritableDatabase ();
         writableDatabase.beginTransaction ();
-        writableDatabase.execSQL ("delete from STOCK_QUOTES where _ID =" + stockListId);
-        writableDatabase.execSQL ("delete from HIST_STOCK_QUOTES where STOCK_ID =" + stockListId);
+        writableDatabase.execSQL ("delete from STOCK_QUOTES where STOCK_CODE = '" + stockCode + "'");
+        writableDatabase.execSQL ("delete from HIST_STOCK_QUOTES where STOCK_ID in (select _ID from STOCK_QUOTES where STOCK_CODE = '" + stockCode + "')");
         writableDatabase.setTransactionSuccessful ();
         writableDatabase.endTransaction ();
     }
