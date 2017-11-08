@@ -75,8 +75,8 @@ public class GraphActivity extends Activity {
         yValuesLLayout = (LinearLayout) findViewById (R.id.y_axis_linearlayout);
         xValuesLLayout = (LinearLayout) findViewById (R.id.x_axis_linearlayout);
         graphViewFrameLayout = (FrameLayout) findViewById (R.id.graph_view_framelayout);
-        stockName = getIntent ().getStringExtra ("STOCK_NAME").split ("\n")[0];
-        stockId = getIntent ().getStringExtra ("STOCK_CODE").split (":")[0].trim ();
+        stockName = getIntent ().getStringExtra ("STOCK_NAME");
+        stockId = getIntent ().getStringExtra ("STOCK_CODE").trim ();
         rsi = getIntent ().getStringExtra ("RSI");
         days2Chart = getIntent ().getIntExtra ("chartDays", 5);
 
@@ -145,9 +145,12 @@ public class GraphActivity extends Activity {
         int numberOfYs = yCoords.size ();
         float yWeight = 0.5f;
 
-
-        max = Collections.max (yCoords);
-        min = Collections.min (yCoords);
+        if (numberOfYs > 0) {
+            max = Collections.max (yCoords);
+            min = Collections.min (yCoords);
+        } else {
+            return;
+        }
         midlle = (max + min) / 2;
         double delta = (max - min) / (yCoordsArr.length - 1);
 

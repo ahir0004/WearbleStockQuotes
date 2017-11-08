@@ -135,8 +135,10 @@ public class StockListDB extends SQLiteOpenHelper {
     protected Cursor readHistoricalStockData (String id, int numberOfDays) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
         StringBuilder sb = new StringBuilder ();
-        sb.append ("SELECT * FROM HIST_STOCK_QUOTES WHERE STOCK_ID= ");
+        sb.append ("SELECT * FROM HIST_STOCK_QUOTES WHERE STOCK_ID IN ");
+        sb.append ("(SELECT _ID FROM STOCK_QUOTES WHERE STOCK_CODE = '");
         sb.append (id);
+        sb.append ("')");
         sb.append (" ORDER BY TRADE_DATE DESC LIMIT ");
         sb.append (numberOfDays);
         return readableDatabase.rawQuery (sb.toString (), null);
@@ -151,12 +153,12 @@ public class StockListDB extends SQLiteOpenHelper {
 
     protected Cursor readStockCodes () {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
-        return readableDatabase.rawQuery ("SELECT * FROM STOCK_QUOTES", null);
+        return readableDatabase.rawQuery ("SELECT * FROM STOCK_QUOTES ORDER BY STOCK_CODE ASC", null);
     }
 
     protected long getIdFromStockCode (String code) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
-        Cursor cursor = readableDatabase.rawQuery ("SELECT _ID FROM STOCK_QUOTES where STOCK_CODE = \'" + code + "\'", null);
+        Cursor cursor = readableDatabase.rawQuery ("SELECT HASHED_NAME FROM STOCK_QUOTES where STOCK_CODE = \'" + code + "\'", null);
 
         long id = 0l;
 

@@ -30,7 +30,7 @@ class HistoricalDataTask extends AsyncTask<String, Void, String> {
         StringBuilder sb = new StringBuilder ();
         sb.append (stockCode);
 
-        Cursor cursor = histDB.readHistoricalStockData (stockId, 1);
+        Cursor cursor = histDB.readHistoricalStockData (stockCode, 1);
 
         long j = 0;
 

@@ -287,9 +287,13 @@ public class BackgroundListenerService extends WearableListenerService {
             try {
 
                 StringBuilder sb = new StringBuilder();
-                sb.append("https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22");
+                sb.append ("https://finance.yahoo.com/quote/");
+                // sb.append("https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22");
                 sb.append(urls[0]);
-                sb.append("%22)&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=");
+                sb.append ("?p=");
+                sb.append (urls[0]);
+                sb.append (")");
+                //sb.append("%22)&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=");
 
                 URL url = new URL(sb.toString());
 
@@ -309,7 +313,12 @@ public class BackgroundListenerService extends WearableListenerService {
                 while ((output = br.readLine()) != null) {
                     chunks.append(output);
                 }
-                chunks.append (":::").append (urls[0]);
+
+                String htmlScrape = chunks.toString ().split ("\\},\"price\":")[1]
+                        .split (",\"financialData\"")[0];
+
+                chunks.setLength (0);
+                chunks.append (htmlScrape).append (":::").append (urls[0]);
                 conn.disconnect();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -326,17 +335,13 @@ public class BackgroundListenerService extends WearableListenerService {
             }
 
             JSONObject jsonObj = null;
-            String stockCode = json2Parse.split (":::")[1].split ("###")[0];
             try {
+
                 jsonObj = new JSONObject (json2Parse.split (":::")[0]);
-
-                JSONObject jsonQueryObj = jsonObj.getJSONObject("query").getJSONObject("results").getJSONObject("quote");
-
-                String name = jsonQueryObj.getString("Name");
-                String deltaRatePercent = jsonQueryObj.getString("PercentChange");
-
+                String stockCode = jsonObj.getString ("symbol");
+                String name = jsonObj.getString ("longName");
                 StockListDB.getInstance (getApplicationContext ())
-                        .updateLiveData (stockCode, jsonQueryObj.toString (), name.hashCode ());
+                        .updateLiveData (stockCode, jsonObj.toString (), name.hashCode ());
 
 
             } catch (JSONException e) {

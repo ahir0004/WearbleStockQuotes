@@ -33,6 +33,7 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 import org.joda.time.DateTime;
+import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -79,9 +80,8 @@ public class MainActivity extends Activity implements
 
         listView.getAdapter ().clear ();
 
-        for (HashMap quote : getQuotes ()) {
-            listView.getAdapter ().add (quote);
-        }
+        listView.getAdapter ().addAll (getQuotes ());
+        //listView.getAdapter ();
         listView.populateListView ();
 
     }
@@ -113,8 +113,9 @@ public class MainActivity extends Activity implements
             public void onItemClick (AdapterView<?> parent, View view, int position, long id) {
                 try {
                     Intent graphIntent = new Intent (MainActivity.this, GraphActivity.class);
+                    graphIntent.addFlags (Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                     graphIntent.putExtra ("STOCK_NAME", listView.getAdapter ().getItem (position).get ("NAME"));
-                    graphIntent.putExtra ("STOCK_CODE", listView.getRequestCodes ()[position]);
+                    graphIntent.putExtra ("STOCK_CODE", listView.getAdapter ().getItem (position).get ("SYMBOL"));
                     graphIntent.putExtra ("RSI", listView.getAdapter ().getItem (position).get ("RSI"));
 
                     startActivity (graphIntent);
@@ -128,7 +129,10 @@ public class MainActivity extends Activity implements
                 @Override
                 public boolean onItemLongClick (AdapterView<?> parent, View view, int position, long id) {
 
-                    String stockName = parent.getItemAtPosition (position).toString ().split ("\n")[0];
+
+                    HashMap<String, String> items = (HashMap) parent.getItemAtPosition (position);
+                    String stockName = items.get ("NAME");
+
                     StringBuilder sb = new StringBuilder (stockName);
 
                     if (stockListDB.isNotifySuspended (stockName.hashCode ())) {
@@ -225,19 +229,22 @@ public class MainActivity extends Activity implements
 
             try {
                 JSONObject jsonQueryObj = new JSONObject (jsonData);
-                String symbol = jsonQueryObj.getString ("Symbol");
-                String ltp = jsonQueryObj.getString ("LastTradePriceOnly");
-                String deltaRatePercent = jsonQueryObj.getString ("PercentChange");
-                String name = jsonQueryObj.getString ("Name");
+                String symbol = jsonQueryObj.getString ("symbol");
+                String ltp = jsonQueryObj.getJSONObject ("regularMarketPrice").getString ("fmt").replace (",", "");
+                String deltaRatePercent = jsonQueryObj.getJSONObject ("regularMarketChangePercent").getString ("fmt");
+                String name = jsonQueryObj.getString ("longName");
 
-                String lastTradeTime = jsonQueryObj.getString("LastTradeTime");
+                String lastTradeTime = jsonQueryObj.getString ("regularMarketTime");
+                DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm");
+                LocalTime lastUpdate = new LocalDateTime (new Long (lastTradeTime) * 1000).toLocalTime ();
 
                 theMap.put ("NAME", name);
                 theMap.put ("LTP", ltp);
-                theMap.put ("LTT", lastTradeTime);
-                theMap.put ("CHANGE", jsonQueryObj.getString ("Change"));
+                theMap.put ("LTT", fmt.print (lastUpdate));
+                theMap.put ("CHANGE", jsonQueryObj.getJSONObject ("regularMarketChange").getString ("fmt"));
                 theMap.put ("CHANGE_PCT", deltaRatePercent);
                 theMap.put ("RSI", new RSI (14, symbol, stockListDB, ltp).calculate ());
+                theMap.put ("SYMBOL", jsonQueryObj.getString ("symbol"));
 
                 theArrayList.add (theMap);
 
@@ -256,8 +263,10 @@ public class MainActivity extends Activity implements
 
         // ((TextView) findViewById (R.id.lastUpdated)).setText ("Last update: \n" + fmt.print (lastUpdate));
 
+
         return theArrayList;
     }
+
 
     private void sendNotification () {
 
@@ -269,7 +278,7 @@ public class MainActivity extends Activity implements
             // situations. However, in this example, the text and the content are always the same, so we need
             // to disambiguate the data item by adding a field that contains teh current time in milliseconds.
 
-            dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, listView.getStocksList ());
+            //  dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, listView.getStocksList ());
             PutDataRequest putDataRequest = dataMapRequest.asPutDataRequest ();
 
             Wearable.DataApi.putDataItem (client, putDataRequest);
@@ -315,15 +324,15 @@ public class MainActivity extends Activity implements
     @Override
     protected void onSaveInstanceState (Bundle bundle) {
 
-        bundle.putStringArrayList ("THE_LIST", listView.getStocksList ());
+        //bundle.putStringArrayList ("THE_LIST", listView.getStocksList ());
         super.onSaveInstanceState (bundle);
     }
 
     @Override
     public void onRestoreInstanceState (Bundle bundle) {
         super.onRestoreInstanceState (bundle);
-        listView.setViewListData (bundle.getStringArrayList ("THE_LIST"));
-        listView.populateListView ();
+        //   listView.setViewListData (bundle.getStringArrayList ("THE_LIST"));
+        // listView.populateListView ();
     }
 
     @Override
