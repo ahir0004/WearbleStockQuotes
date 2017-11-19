@@ -17,8 +17,6 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Created by AHI003 on 08-11-2016.
@@ -77,19 +75,26 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                     //txt = this.getItem (position);
                     hashMap = this.getItem (position);
                     theChange = hashMap.get ("CHANGE").toString () + "/" + hashMap.get ("CHANGE_PCT").toString ();
-                    ((TextView) view.findViewById (R.id.stock_name)).setText (hashMap.get ("NAME").toString ());
-                    ((TextView) view.findViewById (R.id.stock_rate)).setText (hashMap.get ("LTP").toString ());
-                    ((TextView) view.findViewById (R.id.change)).setText (theChange);
-                    ((TextView) view.findViewById (R.id.last_trade_date)).setText (hashMap.get ("LTT").toString ());
-                    //((TextView) view.findViewById (R.id.rsi)).setText ("RSI: " +hashMap.get ("RSI").toString ());
+                    TextView tvName = ((TextView) view.findViewById (R.id.stock_name));
+                    tvName.setText (hashMap.get ("NAME").toString ());
+                    TextView tvLTP = ((TextView) view.findViewById (R.id.stock_rate));
+                    tvLTP.setText (hashMap.get ("LTP").toString ());
+                    TextView tvCng = ((TextView) view.findViewById (R.id.change));
+                    tvCng.setText (theChange);
+                    TextView tvLTD = ((TextView) view.findViewById (R.id.last_trade_date));
+                    tvLTD.setText (hashMap.get ("LTT").toString ());
+                    TextView tvRSI = ((TextView) view.findViewById (R.id.rsi));
                     // Set a background color for ListView regular row/item
 
                     if (theChange.contains ("-")) {
-                        view.setBackgroundColor (Color.RED);
+                        //view.setBackgroundColor (Color.RED);
+                        tvCng.setTextColor (Color.rgb (245, 0, 0));
+                        tvRSI.setBackgroundResource (R.mipmap.down);
                     } else {
-                        view.setBackgroundColor (Color.GREEN);
+                        //view.setBackgroundColor (Color.GREEN);
+                        tvCng.setTextColor (Color.rgb (0, 200, 0));
+                        tvRSI.setBackgroundResource (R.mipmap.up);
                     }
-
 
                     if (getRequestCodes ().length > 0 && getRequestCodes ().length > position) {
 
@@ -122,15 +127,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
 
     }
 
-    private ArrayList<HashMap<String, String>> sort (ArrayList<HashMap<String, String>> theArrayList) {
 
-        final List<HashMap<String, String>> sorted =
-                theArrayList.stream ()
-                        .sorted (Comparator.comparing (m -> m.get ("NAME")))
-                        .collect (Collectors.toList ());
-
-        return (ArrayList<HashMap<String, String>>) sorted;
-    }
 
     @Override
     public ArrayAdapter<HashMap<String, String>> getAdapter () {

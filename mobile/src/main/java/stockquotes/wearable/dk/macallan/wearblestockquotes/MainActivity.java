@@ -15,7 +15,6 @@ import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
@@ -42,6 +41,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 
 public class MainActivity extends Activity implements
         GoogleApiClient.ConnectionCallbacks,
@@ -97,7 +97,7 @@ public class MainActivity extends Activity implements
         startService (theServiceIntent);
 
         setContentView (R.layout.activity_main);
-        /*mAdView = (AdView) findViewById(R.id.adView);
+       /* mAdView = (AdView) findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().build();
         mAdView.loadAd(adRequest);*/
 
@@ -112,10 +112,19 @@ public class MainActivity extends Activity implements
             @Override
             public void onItemClick (AdapterView<?> parent, View view, int position, long id) {
                 try {
+                    String name = listView.getAdapter ().getItem (position).get ("NAME");
+                    String symbol = listView.getAdapter ().getItem (position).get ("SYMBOL");
+                    Cursor cursor = stockListDB.readHistoricalStockData (symbol, 1);
+
+                    if (!cursor.moveToNext ()) {
+                        String msg = String.format ("%s HISTORICAL DATA NOT READY YET", name.toUpperCase ());
+                        Toast.makeText (MainActivity.this, msg, Toast.LENGTH_LONG).show ();
+                        return;
+                    }
                     Intent graphIntent = new Intent (MainActivity.this, GraphActivity.class);
                     graphIntent.addFlags (Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                     graphIntent.putExtra ("STOCK_NAME", listView.getAdapter ().getItem (position).get ("NAME"));
-                    graphIntent.putExtra ("STOCK_CODE", listView.getAdapter ().getItem (position).get ("SYMBOL"));
+                    graphIntent.putExtra ("STOCK_CODE", symbol);
                     graphIntent.putExtra ("RSI", listView.getAdapter ().getItem (position).get ("RSI"));
 
                     startActivity (graphIntent);
@@ -157,7 +166,7 @@ public class MainActivity extends Activity implements
             });
 
         refreshList ();
-        Button refreshButton = (Button) findViewById (R.id.refresh_button);
+        ImageButton refreshButton = (ImageButton) findViewById (R.id.refresh_button);
         if (refreshButton != null) {
             refreshButton.setOnClickListener (new View.OnClickListener () {
                 @Override
@@ -231,8 +240,11 @@ public class MainActivity extends Activity implements
                 JSONObject jsonQueryObj = new JSONObject (jsonData);
                 String symbol = jsonQueryObj.getString ("symbol");
                 String ltp = jsonQueryObj.getJSONObject ("regularMarketPrice").getString ("fmt").replace (",", "");
-                String deltaRatePercent = jsonQueryObj.getJSONObject ("regularMarketChangePercent").getString ("fmt");
+                String tempDelta = jsonQueryObj.getJSONObject ("regularMarketChangePercent").getString ("fmt");
+
+                String deltaRatePercent = String.format (Locale.US, "%.2f", Double.parseDouble (tempDelta.replace ("%", "")));
                 String name = jsonQueryObj.getString ("longName");
+                String change = String.format ("%.2f", Double.parseDouble (jsonQueryObj.getJSONObject ("regularMarketChange").getString ("fmt")));
 
                 String lastTradeTime = jsonQueryObj.getString ("regularMarketTime");
                 DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm");
@@ -241,8 +253,8 @@ public class MainActivity extends Activity implements
                 theMap.put ("NAME", name);
                 theMap.put ("LTP", ltp);
                 theMap.put ("LTT", fmt.print (lastUpdate));
-                theMap.put ("CHANGE", jsonQueryObj.getJSONObject ("regularMarketChange").getString ("fmt"));
-                theMap.put ("CHANGE_PCT", deltaRatePercent);
+                theMap.put ("CHANGE", change);
+                theMap.put ("CHANGE_PCT", deltaRatePercent + "%");
                 theMap.put ("RSI", new RSI (14, symbol, stockListDB, ltp).calculate ());
                 theMap.put ("SYMBOL", jsonQueryObj.getString ("symbol"));
 

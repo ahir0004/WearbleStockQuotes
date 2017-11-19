@@ -24,8 +24,7 @@ class HistoricalDataTask extends AsyncTask<String, Void, String> {
     @Override
     protected String doInBackground (String... urls) {
 
-        String stockId = urls[0].split ("::")[0];
-        String stockCode = urls[0].split ("::")[1];
+        String stockCode = urls[0];
 
         StringBuilder sb = new StringBuilder ();
         sb.append (stockCode);
@@ -62,7 +61,7 @@ class HistoricalDataTask extends AsyncTask<String, Void, String> {
                 chunks.append (":::");
                 chunks.append (temp.get ("date"));
                 chunks.append (":::");
-                chunks.append (stockId);
+                chunks.append (sb.toString ());
                 chunks.append (":::");
             }
 
@@ -78,7 +77,7 @@ class HistoricalDataTask extends AsyncTask<String, Void, String> {
         String[] historicalRatesAndDates = res.split (":::");
 
         if (historicalRatesAndDates.length > 1)
-            for (int i = 0; i < historicalRatesAndDates.length; i = i + 3) {
+            for (int i = 0; i < (historicalRatesAndDates.length); i = i + 3) {
                 histDB.insertHistoricals (historicalRatesAndDates[i],
                         historicalRatesAndDates[i + 1], historicalRatesAndDates[i + 2]);
             }

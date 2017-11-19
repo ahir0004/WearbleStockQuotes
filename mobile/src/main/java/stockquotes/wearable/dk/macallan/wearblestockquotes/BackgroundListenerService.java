@@ -23,13 +23,10 @@ import com.google.android.gms.wearable.WearableListenerService;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -41,7 +38,7 @@ public class BackgroundListenerService extends WearableListenerService {
     private static final String SEND_MORE_MONEY_PATH = "SEND_MORE_MONEY";
     private static final String NOTIFICATION_CONTENT = "content";
     Handler pollQuotesHandler;
-    private List<String> quotesArrayList = Collections.synchronizedList (new ArrayList<String> ());
+    //private List<String> quotesArrayList = Collections.synchronizedList (new ArrayList<String> ());
     private int counter = 0;
     private GoogleApiClient client;
     private String nodeId;
@@ -52,7 +49,7 @@ public class BackgroundListenerService extends WearableListenerService {
         @Override
         public void run() {
             executeRequest();
-            pollQuotesHandler.postDelayed (this, 25000);
+            pollQuotesHandler.postDelayed (this, 60000);
         }
     };
 
@@ -134,17 +131,13 @@ public class BackgroundListenerService extends WearableListenerService {
         Wearable.DataApi.putDataItem(client, putDataRequest);
     }
 
-    private synchronized List<String> getQuotesArrayList () {
-        return quotesArrayList;
-    }
-
     protected String[] getRequestCodes() {
         Cursor cursor = StockListDB.getInstance (BackgroundListenerService.this).readStockCodes ();
         StringBuilder stringBuilder = new StringBuilder();
         ArrayList<String> requestCodesList = new ArrayList<>();
         while (cursor.moveToNext()) {
 
-            requestCodesList.add(stringBuilder.append(cursor.getInt(0)).append("::")
+            requestCodesList.add (stringBuilder
                     .append(cursor.getString(1))
                     .toString());
             stringBuilder.setLength(0);
@@ -194,16 +187,14 @@ public class BackgroundListenerService extends WearableListenerService {
         pollQuotesHandler = new Handler();
         pollQuotesHandler.postDelayed(pollQuotesRunnable, 1000);
         stockListDB = StockListDB.getInstance (getApplicationContext ());
-
-        //
-
     }
 
     private void getHistoricalData() {
 
         for (String stockCode : getRequestCodes()) {
             HistoricalDataTask hdt = new HistoricalDataTask(getApplicationContext());
-            hdt.execute(stockCode);
+            if (!"".equals (stockCode))
+                hdt.execute (stockCode);
         }
     }
 
@@ -231,7 +222,6 @@ public class BackgroundListenerService extends WearableListenerService {
         String thePath = new String (messageEvent.getPath ()),
                 nodeId = messageEvent.getSourceNodeId ();
 
-
         Toast.makeText (BackgroundListenerService.this, "hello from Listener", Toast.LENGTH_SHORT).show ();
         /*if ("LIST".equals (thePath)) {
             sendNotification ();
@@ -243,8 +233,6 @@ public class BackgroundListenerService extends WearableListenerService {
 
     private void executeRequest() {
         String[] reqCodes = getStockRequestCodes();
-
-        quotesArrayList.clear();
 
         for (int i = 0; i < reqCodes.length; i++) {
             BackgroundListenerService.DownloadWebPageTask task = new BackgroundListenerService.DownloadWebPageTask();
@@ -284,18 +272,19 @@ public class BackgroundListenerService extends WearableListenerService {
         protected String doInBackground(String... urls) {
 
             StringBuilder chunks = new StringBuilder();
-            try {
 
-                StringBuilder sb = new StringBuilder();
-                sb.append ("https://finance.yahoo.com/quote/");
-                // sb.append("https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22");
-                sb.append(urls[0]);
-                sb.append ("?p=");
-                sb.append (urls[0]);
-                sb.append (")");
+            String htmlScrape = "";
+
+            StringBuilder sb = new StringBuilder ();
+            sb.append ("https://finance.yahoo.com/quote/");
+            // sb.append("https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22");
+            sb.append (urls[0]);
+            sb.append ("?p=");
+            sb.append (urls[0]);
+            sb.append (")");
                 //sb.append("%22)&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=");
 
-                URL url = new URL(sb.toString());
+       /*         URL url = new URL(sb.toString());
 
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -304,7 +293,13 @@ public class BackgroundListenerService extends WearableListenerService {
                     Toast.makeText (getApplicationContext (), "NO YAHOO CONNECTION!", Toast.LENGTH_LONG).show ();
                     return "";
                 }
-
+*/
+            try {
+                htmlScrape = Jsoup.connect (sb.toString ()).maxBodySize (270000).get ().html ();
+            } catch (IOException e) {
+                e.printStackTrace ();
+            }
+       /*
                 BufferedReader br = new BufferedReader(new InputStreamReader(
                         (conn.getInputStream())));
 
@@ -319,12 +314,15 @@ public class BackgroundListenerService extends WearableListenerService {
 
                 chunks.setLength (0);
                 chunks.append (htmlScrape).append (":::").append (urls[0]);
-                conn.disconnect();
-            } catch (Exception e) {
-                e.printStackTrace();
+                conn.disconnect();*/
+
+            String retVal = "";
+            if (htmlScrape.length () > 1) {
+                retVal = htmlScrape.split ("\\},\"price\":")[1]
+                        .split (",\"financialData\"")[0];
             }
 
-            return chunks.toString();
+            return retVal;
         }
 
         @Override

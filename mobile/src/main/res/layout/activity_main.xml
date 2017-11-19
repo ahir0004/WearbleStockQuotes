@@ -14,27 +14,30 @@
 
 
     <LinearLayout
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="left"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="end"
         android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/refresh_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="@string/refresh_button"
-            />
 
         <ImageButton
             android:id="@+id/add_stock_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="left"
-            android:background="#00ffffff"
-            android:foregroundGravity="left"
-            android:src="@drawable/plus"/>
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/black"
+            android:scaleType="fitXY"
+            android:src="@drawable/plus_50"
+            />
+
+        <ImageButton
+            android:id="@+id/refresh_button"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:background="@android:color/black"
+            android:scaleType="fitXY"
+            android:src="@drawable/white_refresh_02"
+            android:text="Refresh"/>
+
     </LinearLayout>
 
     <!--ScrollView
@@ -60,12 +63,11 @@
 
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        ads:adSize="BANNER"
+        ads:adSize="LARGE_BANNER"
         ads:adUnitId="@string/banner_ad_unit_id">
-
     </com.google.android.gms.ads.AdView>
 </LinearLayout>

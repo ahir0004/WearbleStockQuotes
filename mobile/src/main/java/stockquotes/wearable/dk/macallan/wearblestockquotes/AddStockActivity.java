@@ -2,9 +2,11 @@ package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -37,16 +39,31 @@ public class AddStockActivity extends Activity {
         arrayAdapter = new ArrayAdapter<String> (this, android.R.layout.simple_list_item_1, getQuotesList ());
         listView.setAdapter (arrayAdapter);
         //listView.isOnItemClickable (true);
-        listView.setOnItemClickListener (new AdapterView.OnItemClickListener () {
+        listView.setOnItemLongClickListener (new AdapterView.OnItemLongClickListener () {
             @Override
-            public void onItemClick (AdapterView<?> parent, View view, int position, long id) {
+            public boolean onItemLongClick (AdapterView<?> parent, View view, int position, long id) {
 
-                String stockCode = parent.getItemAtPosition (position).toString ();
-                stockListDB.removeStockFromDB (stockCode);
-                arrayAdapter.remove (stockCode);
-                arrayAdapter.notifyDataSetChanged ();
+                new AlertDialog.Builder (AddStockActivity.this)
+                        .setIcon (android.R.drawable.ic_dialog_alert)
+                        .setTitle ("Delete stock code")
+                        .setMessage ("Are you sure you want to delete this stock code?")
+                        .setPositiveButton ("Yes", new DialogInterface.OnClickListener () {
+                            @Override
+                            public void onClick (DialogInterface dialog, int which) {
+                                String stockCode = parent.getItemAtPosition (position).toString ();
+                                stockListDB.removeStockFromDB (stockCode);
+                                arrayAdapter.remove (stockCode);
+                                arrayAdapter.notifyDataSetChanged ();
+                            }
+
+                        })
+                        .setNegativeButton ("No", null)
+                        .show ();
+
+                return true;
             }
         });
+
         Button addStockbutton = new Button (this);
         addStockbutton.setText ("Add stock");
         LinearLayout linearLayout = new LinearLayout (this);
@@ -60,6 +77,9 @@ public class AddStockActivity extends Activity {
             @Override
             public void onClick (View v) {
                 String stockCode = editText.getText ().toString ().toUpperCase ();
+                if ("".equals (stockCode))
+                    return;
+
                 editText.setText ("");
                 stockListDB.insert (stockCode);
                 long id = stockListDB.getIdFromStockCode (stockCode);
@@ -69,9 +89,8 @@ public class AddStockActivity extends Activity {
                     arrayAdapter.add (stockCode);
                     arrayAdapter.notifyDataSetChanged ();
                     HistoricalDataTask hdt = new HistoricalDataTask (getApplicationContext ());
-                    hdt.execute (id + "::" + stockCode);
+                    hdt.execute (stockCode);
                 }
-
             }
         });
 

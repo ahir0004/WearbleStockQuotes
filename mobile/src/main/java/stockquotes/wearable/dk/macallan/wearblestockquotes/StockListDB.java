@@ -42,10 +42,10 @@ public class StockListDB extends SQLiteOpenHelper {
         db.execSQL ("CREATE TABLE HIST_STOCK_QUOTES (HIST_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "TRADE_DATE numeric, " +
                 "JSON_OBJECT text, " +
-                "STOCK_ID integer NOT NULL, " +
+                "STOCK_SYMBOL integer NOT NULL, " +
                 "INSERT_DATE numeric, " +
-                "UNIQUE(TRADE_DATE, JSON_OBJECT, STOCK_ID) ON CONFLICT ABORT," +
-                "FOREIGN KEY (STOCK_ID) REFERENCES STOCK_QUOTES(_ID));");
+                "UNIQUE(TRADE_DATE, JSON_OBJECT, STOCK_SYMBOL) ON CONFLICT ABORT," +
+                "FOREIGN KEY (STOCK_SYMBOL) REFERENCES STOCK_QUOTES(STOCK_CODE));");
     }
 
     @Override
@@ -119,7 +119,7 @@ public class StockListDB extends SQLiteOpenHelper {
 
 
         ContentValues values = new ContentValues ();
-        values.put ("STOCK_ID", histData[2].replace (":", ""));
+        values.put ("STOCK_SYMBOL", histData[2].replace (":", ""));
         values.put ("TRADE_DATE", histData[1].replace (":", ""));
         values.put ("JSON_OBJECT", histData[0]);
         values.put ("INSERT_DATE", new DateTime ().getMillis ());
@@ -135,10 +135,9 @@ public class StockListDB extends SQLiteOpenHelper {
     protected Cursor readHistoricalStockData (String id, int numberOfDays) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
         StringBuilder sb = new StringBuilder ();
-        sb.append ("SELECT * FROM HIST_STOCK_QUOTES WHERE STOCK_ID IN ");
-        sb.append ("(SELECT _ID FROM STOCK_QUOTES WHERE STOCK_CODE = '");
+        sb.append ("SELECT * FROM HIST_STOCK_QUOTES WHERE STOCK_SYMBOL = '");
         sb.append (id);
-        sb.append ("')");
+        sb.append ("'");
         sb.append (" ORDER BY TRADE_DATE DESC LIMIT ");
         sb.append (numberOfDays);
         return readableDatabase.rawQuery (sb.toString (), null);
@@ -147,7 +146,7 @@ public class StockListDB extends SQLiteOpenHelper {
     protected Cursor getRSIData (String stock_name) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
         return readableDatabase.rawQuery ("SELECT TRADE_DATE, JSON_OBJECT FROM HIST_STOCK_QUOTES " +
-                "WHERE STOCK_ID in(select _id from STOCK_QUOTES WHERE STOCK_CODE ='" + stock_name + "')" +
+                "WHERE STOCK_SYMBOL = '" + stock_name + "'" +
                 " ORDER BY TRADE_DATE ASC ", null);
     }
 
