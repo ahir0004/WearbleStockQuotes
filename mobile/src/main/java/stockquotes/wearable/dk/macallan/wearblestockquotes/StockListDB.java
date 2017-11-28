@@ -190,7 +190,7 @@ public class StockListDB extends SQLiteOpenHelper {
         SQLiteDatabase writableDatabase = this.getWritableDatabase ();
         writableDatabase.beginTransaction ();
         writableDatabase.execSQL ("delete from STOCK_QUOTES where STOCK_CODE = '" + stockCode + "'");
-        writableDatabase.execSQL ("delete from HIST_STOCK_QUOTES where STOCK_ID in (select _ID from STOCK_QUOTES where STOCK_CODE = '" + stockCode + "')");
+        writableDatabase.execSQL ("delete from HIST_STOCK_QUOTES where  STOCK_SYMBOL = '" + stockCode + "'");
         writableDatabase.setTransactionSuccessful ();
         writableDatabase.endTransaction ();
     }

@@ -9,10 +9,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.EditText;
@@ -20,16 +18,6 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.google.android.gms.ads.AdView;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.wearable.DataEventBuffer;
-import com.google.android.gms.wearable.MessageApi;
-import com.google.android.gms.wearable.MessageEvent;
-import com.google.android.gms.wearable.NodeApi;
-import com.google.android.gms.wearable.PutDataMapRequest;
-import com.google.android.gms.wearable.PutDataRequest;
-import com.google.android.gms.wearable.Wearable;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
@@ -43,11 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 
-public class MainActivity extends Activity implements
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener,
-        DataApi.DataListener,
-        MessageApi.MessageListener {
+public class MainActivity extends Activity {
 
     public static final String NOTIFICATION_PATH = "/notification";
     private static final String NOTIFICATION_CONTENT = "content";
@@ -60,7 +44,6 @@ public class MainActivity extends Activity implements
      * ATTENTION: This was auto-generated to implement the App Indexing API.
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
-    private GoogleApiClient client;
     private Handler handler = new Handler ();
     private Handler pollQuotes = new Handler ();
     private String nodeId;
@@ -191,12 +174,12 @@ public class MainActivity extends Activity implements
             });
         }
 
-        client = new GoogleApiClient.Builder (this)
+       /* client = new GoogleApiClient.Builder (this)
                 .addApi (Wearable.API)
                 .addConnectionCallbacks (this)
                 .addOnConnectionFailedListener (this)
                 .build ();
-
+*/
         pollQuotes.postDelayed (pollQuotesRunnable, 1000);
 
     }
@@ -205,20 +188,13 @@ public class MainActivity extends Activity implements
     @Override
     protected void onResume () {
         super.onResume ();
-        client.connect ();
-        if (client.isConnected ()) {
-            Toast.makeText (this, "OnResume", Toast.LENGTH_LONG);
-        }
+
         refreshList ();
     }
 
     @Override
     protected void onPause () {
-        if ((client != null) && client.isConnected ()) {
-            Wearable.DataApi.removeListener (client, this);
-            Wearable.MessageApi.removeListener (client, this);
-            client.disconnect ();
-        }
+
 
         super.onPause ();
     }
@@ -280,30 +256,10 @@ public class MainActivity extends Activity implements
     }
 
 
-    private void sendNotification () {
-
-
-        if (client.isConnected ()) {
-            PutDataMapRequest dataMapRequest = PutDataMapRequest.create (NOTIFICATION_PATH);
-            // Make sure the data item is unique. Usually, this will not be required, as the payload
-            // (in this case the title and the content of the notification) will be different for almost all
-            // situations. However, in this example, the text and the content are always the same, so we need
-            // to disambiguate the data item by adding a field that contains teh current time in milliseconds.
-
-            //  dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, listView.getStocksList ());
-            PutDataRequest putDataRequest = dataMapRequest.asPutDataRequest ();
-
-            Wearable.DataApi.putDataItem (client, putDataRequest);
-        } else {
-            Log.e (TAG, "No connection to wearable available!");
-        }
-
-    }
-
     @Override
     public void onStart () {
         super.onStart ();
-        client.connect ();
+        // client.connect ();
 
 
     }
@@ -313,24 +269,26 @@ public class MainActivity extends Activity implements
         super.onStop ();// ATTENTION: This was auto-generated to implement the App Indexing API.
 
 
-        client.disconnect ();
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
 
     }
+/*
 
     @Override
     public void onMessageReceived (MessageEvent messageEvent) {
 
-        /*String theTxt =  new String(messageEvent.getData());
+        */
+/*String theTxt =  new String(messageEvent.getData());
 
         nodeId = messageEvent.getSourceNodeId();
 
+*//*
 
           Toast.makeText (MainActivity.this, "hello from Mobile", Toast.LENGTH_SHORT).show ();
-        sendNotification ();*/
 
     }
+*/
 
 
     @Override
@@ -346,9 +304,11 @@ public class MainActivity extends Activity implements
         //   listView.setViewListData (bundle.getStringArrayList ("THE_LIST"));
         // listView.populateListView ();
     }
+/*
 
     @Override
     public void onDataChanged (DataEventBuffer dataEvents) {
+*/
 /*
 
         try {
@@ -382,9 +342,12 @@ public class MainActivity extends Activity implements
         } catch (Exception e) {
             e.printStackTrace ();
         }
-*/
-    }
+*//*
 
+    }
+*/
+
+/*
 
     @Override
     public void onConnected (Bundle connectionHint) {
@@ -395,21 +358,12 @@ public class MainActivity extends Activity implements
             public void run () {
                 NodeApi.GetLocalNodeResult nodes = Wearable.NodeApi.getLocalNode (client).await ();
 
-                System.out.println ("LOCALNODE: " + nodes.getNode ().getId ());
+                System.out.println ("LOCALNODE_main: " + nodes.getNode ().getId ());
             }
         }).start ();
 
     }
-
-    @Override
-    public void onConnectionSuspended (int i) {
-
-    }
-
-    @Override
-    public void onConnectionFailed (@NonNull ConnectionResult connectionResult) {
-
-    }
+*/
 
     private void pushNotification (String stockCode, String stockName, String changePct) {
 

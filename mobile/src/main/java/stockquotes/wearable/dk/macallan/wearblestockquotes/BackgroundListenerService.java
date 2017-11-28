@@ -21,14 +21,22 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.wearable.WearableListenerService;
 
+import org.joda.time.DateTime;
+import org.joda.time.LocalDateTime;
+import org.joda.time.LocalTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 import static com.google.android.gms.wearable.DataMap.TAG;
 
@@ -64,6 +72,8 @@ public class BackgroundListenerService extends WearableListenerService {
                /* NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi.getConnectedNodes( client ).await();
 
                 for(Node node : nodes.getNodes()) {
+                    System.out.println (node.getId ());
+                }
 */
                 MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage(
 
@@ -156,9 +166,8 @@ public class BackgroundListenerService extends WearableListenerService {
             public void onConnected(Bundle connectionHint) {
                 Log.d(TAG, "onConnected: " + connectionHint);
                 Wearable.MessageApi.addListener(client, BackgroundListenerService.this);
-//                retrieveDeviceNode();
-                //sendMessage ("path", "BLABLA");
-
+                System.out.println ("BAck_onconnnected");
+                sendMessage ("path", "BLABLA");
             }
 
             @Override
@@ -177,7 +186,7 @@ public class BackgroundListenerService extends WearableListenerService {
         client.connect();
         Toast.makeText(BackgroundListenerService.this, " TOAST_FROM_SERVICE", Toast.LENGTH_LONG);
 
-        //getNode();
+        // getNode();
         return START_STICKY;
     }
 
@@ -190,15 +199,12 @@ public class BackgroundListenerService extends WearableListenerService {
     }
 
     private void getHistoricalData() {
-
         for (String stockCode : getRequestCodes()) {
             HistoricalDataTask hdt = new HistoricalDataTask(getApplicationContext());
             if (!"".equals (stockCode))
                 hdt.execute (stockCode);
         }
     }
-
-
 
     private Node getNode() {
         HashSet<String> results = new HashSet<String>();
@@ -222,13 +228,23 @@ public class BackgroundListenerService extends WearableListenerService {
         String thePath = new String (messageEvent.getPath ()),
                 nodeId = messageEvent.getSourceNodeId ();
 
-        Toast.makeText (BackgroundListenerService.this, "hello from Listener", Toast.LENGTH_SHORT).show ();
-        /*if ("LIST".equals (thePath)) {
-            sendNotification ();
-        } else {
+        new Thread (new Runnable () {
+            @Override
+            public void run () {
+                if (client.isConnected ()) {
+                    PutDataMapRequest dataMapRequest = PutDataMapRequest.create ("/" + UUID.randomUUID ().toString ());
+                    dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, getQuotes ());
+                    PutDataRequest putDataRequest = dataMapRequest.asPutDataRequest ();
 
-        }*/
-        sendNotification ();
+                    Wearable.DataApi.putDataItem (client, putDataRequest);
+                } else {
+                    Log.e (TAG, "No connection to wearable available!");
+                }
+
+            }
+        }) {
+
+        }.start ();
     }
 
     private void executeRequest() {
@@ -265,6 +281,71 @@ public class BackgroundListenerService extends WearableListenerService {
 
         return rsi.calculate ();
 
+    }
+
+    private ArrayList<String> getQuotes () {
+
+        ArrayList<String> theArrayList = new ArrayList<> ();
+        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
+        while (cursor.moveToNext ()) {
+
+            HashMap<String, String> theMap = new HashMap<String, String> ();
+
+            String jsonData = cursor.getString (4);
+
+            if (jsonData == null || "null".equalsIgnoreCase (jsonData))
+                continue;
+
+            try {
+                JSONObject jsonQueryObj = new JSONObject (jsonData);
+                String symbol = jsonQueryObj.getString ("symbol");
+                String ltp = jsonQueryObj.getJSONObject ("regularMarketPrice").getString ("fmt").replace (",", "");
+                String tempDelta = jsonQueryObj.getJSONObject ("regularMarketChangePercent").getString ("fmt");
+
+                String deltaRatePercent = String.format (Locale.US, "%.2f", Double.parseDouble (tempDelta.replace ("%", "")));
+                String name = jsonQueryObj.getString ("longName");
+                String change = String.format ("%.2f", Double.parseDouble (jsonQueryObj.getJSONObject ("regularMarketChange").getString ("fmt")));
+
+                String lastTradeTime = jsonQueryObj.getString ("regularMarketTime");
+                DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm");
+                LocalTime lastUpdate = new LocalDateTime (new Long (lastTradeTime) * 1000).toLocalTime ();
+/*
+                theMap.put ("NAME", name);
+                theMap.put ("LTP", ltp);
+                theMap.put ("LTT", fmt.print (lastUpdate));
+                theMap.put ("CHANGE", change);
+                theMap.put ("CHANGE_PCT", deltaRatePercent + "%");
+                theMap.put ("RSI", new RSI (14, symbol, stockListDB, ltp).calculate ());
+                theMap.put ("SYMBOL", jsonQueryObj.getString ("symbol"));
+*/
+
+                StringBuilder sb = new StringBuilder ();
+                sb.append (name);
+                sb.append (System.getProperty ("line.separator"));
+                sb.append (ltp);
+                sb.append (System.getProperty ("line.separator"));
+                sb.append (change);
+                sb.append ("/");
+                sb.append (deltaRatePercent);
+                sb.append ("%");
+                sb.append (System.getProperty ("line.separator"));
+                sb.append (fmt.print (lastUpdate));
+                theArrayList.add (sb.toString ());
+
+
+            } catch (JSONException e) {
+                e.printStackTrace ();
+                break;
+            }
+
+        }
+        DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm:ss");
+        LocalTime lastUpdate = new DateTime ().toLocalTime ();
+
+        // ((TextView) findViewById (R.id.lastUpdated)).setText ("Last update: \n" + fmt.print (lastUpdate));
+
+
+        return theArrayList;
     }
 
     private class DownloadWebPageTask extends AsyncTask<String, Void, String> {

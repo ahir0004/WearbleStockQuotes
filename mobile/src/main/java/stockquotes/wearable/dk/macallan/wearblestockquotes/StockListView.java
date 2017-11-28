@@ -67,7 +67,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
 
                 LayoutInflater inflater = ((MainActivity) getContext ()).getLayoutInflater ();
                 View view = inflater.inflate (R.layout.list_layout, null, true);
-                view.setBackgroundColor (Color.WHITE);
+                //view.setBackgroundColor (Color.WHITE);
                 HashMap hashMap;
                 String theChange = "";
 
@@ -83,17 +83,17 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                     tvCng.setText (theChange);
                     TextView tvLTD = ((TextView) view.findViewById (R.id.last_trade_date));
                     tvLTD.setText (hashMap.get ("LTT").toString ());
-                    TextView tvRSI = ((TextView) view.findViewById (R.id.rsi));
+                    //TextView tvRSI = ((TextView) view.findViewById (R.id.rsi));
                     // Set a background color for ListView regular row/item
-
+                    //tvRSI.setBackgroundColor (Color.parseColor ("#80000000"));
                     if (theChange.contains ("-")) {
                         //view.setBackgroundColor (Color.RED);
                         tvCng.setTextColor (Color.rgb (245, 0, 0));
-                        tvRSI.setBackgroundResource (R.mipmap.down);
+                        //  tvRSI.setBackgroundResource (R.mipmap.down);
                     } else {
                         //view.setBackgroundColor (Color.GREEN);
                         tvCng.setTextColor (Color.rgb (0, 200, 0));
-                        tvRSI.setBackgroundResource (R.mipmap.up);
+                        //tvRSI.setBackgroundResource (R.mipmap.up);
                     }
 
                     if (getRequestCodes ().length > 0 && getRequestCodes ().length > position) {

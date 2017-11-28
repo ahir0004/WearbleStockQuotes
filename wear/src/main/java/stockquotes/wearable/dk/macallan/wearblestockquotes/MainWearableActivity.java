@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.format.Time;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -18,17 +19,16 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.MessageApi;
 import com.google.android.gms.wearable.MessageEvent;
-import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
@@ -71,21 +71,52 @@ public class MainWearableActivity extends Activity implements
         imageView = (ImageView) findViewById (R.id.updateView);
         lastUpdateTextView = (TextView) findViewById (R.id.last_updated);
 
-        adapter = new ArrayAdapter<String> (this,
-                android.R.layout.simple_list_item_1, android.R.id.text1, quotesArrayList) {
+        adapter = new ArrayAdapter<String> (getBaseContext (),
+                R.layout.wearable_list_layout) {
             @Override
             public View getView (int position, View convertView, ViewGroup parent) {
-                // Get the current item from ListView
-                View view = super.getView (position, convertView, parent);
+
+                LayoutInflater inflater = getLayoutInflater ();
+                View view = inflater.inflate (R.layout.wearable_list_layout, null, true);
+
+                String str = "";
+                TextView tv = (TextView) view.findViewById (R.id.stock_name_wear);
+                TextView tradePrice = ((TextView) view.findViewById (R.id.stock_rate));
+                TextView tradeDate = ((TextView) view.findViewById (R.id.last_trade_date));
+                TextView tradeChange = ((TextView) view.findViewById (R.id.change));
 
 
-                String txt = ((TextView) view).getText ().toString ();
-                // Set a background color for ListView regular row/item
+                if (this.getCount () > 0) {
 
-                if (txt.contains ("+")) {
-                    view.setBackgroundColor (getScreenBrightness () > 0.0f ? Color.GREEN : Color.LTGRAY);
+                    str = this.getItem (position);
+                    String[] stockValues = null;
+
+                    stockValues = str.split ("\n");
+                /*
+                    InputFilter[] filters = new InputFilter[1];
+                    filters[0] = new InputFilter.LengthFilter(19);
+                    tv.setFilters (filters);
+                */
+                    String theName = stockValues[0];
+                    if (!"".equals (theName) && theName != null && theName.length () > 18) {
+                        theName = theName.substring (0, theName.lastIndexOf (" "));
+                        if (theName.length () > 18) {
+                            theName = theName.substring (0, 18);
+                        }
+                    }
+
+                    tv.setText (theName);
+                    tradePrice.setText (stockValues[1]);
+                    tradeChange.setText (stockValues[2]);
+                    tradeDate.setText (stockValues[3]);
+
+                }
+
+
+                if (str.contains ("-")) {
+                    tradeChange.setTextColor (getScreenBrightness () > 0.0f ? Color.RED : Color.LTGRAY);
                 } else {
-                    view.setBackgroundColor (getScreenBrightness () > 0.0f ? Color.RED : Color.GRAY);
+                    tradeChange.setTextColor (getScreenBrightness () > 0.0f ? Color.GREEN : Color.LTGRAY);
                 }
 
                 return view;
@@ -119,11 +150,39 @@ public class MainWearableActivity extends Activity implements
     }
 
     protected void requestQuotes (View view) {
-        new WearableActivityTask ().execute ("LIST");
+        new WearableActivityTask ().execute ("LIST", "GEN.CO");
         setScreenBrightness (0.5f);
         adapter.notifyDataSetChanged ();
         handler.postDelayed (runnable, 10000l);
     }
+/*
+
+    private void initList () {
+        adapter.clear ();
+        StringBuilder sb = new StringBuilder ();
+        sb.append ("TESTSTOCK LDT");
+        sb.append (System.getProperty("line.separator"));
+        sb.append ("1389.00");
+        sb.append (System.getProperty("line.separator"));
+        sb.append ("-2.60");
+        sb.append ("/");
+        sb.append ("-0.67%");
+        sb.append (System.getProperty("line.separator"));
+        sb.append ("13.15");
+        adapter.add (sb.toString ());
+        sb.delete (0,sb.length ());
+        sb.append ("VESTAS WIND SYSTEMS A/S");
+        sb.append (System.getProperty("line.separator"));
+        sb.append ("593.00");
+        sb.append (System.getProperty("line.separator"));
+        sb.append ("2.60");
+        sb.append ("/");
+        sb.append ("0.67%");
+        sb.append (System.getProperty("line.separator"));
+        sb.append ("13.20");
+        adapter.add (sb.toString ());
+    }
+*/
 
     @Override
     protected void onResume () {
@@ -147,16 +206,23 @@ public class MainWearableActivity extends Activity implements
         LOGD (TAG, "onConnected(): Successfully connected to Google API client");
         Wearable.DataApi.addListener (mGoogleApiClient, this);
         Wearable.MessageApi.addListener (mGoogleApiClient, this);
-
-        Wearable.NodeApi.getConnectedNodes (mGoogleApiClient).setResultCallback (new ResultCallback<NodeApi.GetConnectedNodesResult> () {
+        new Thread (new Runnable () {
             @Override
-            public void onResult (NodeApi.GetConnectedNodesResult nodes) {
-                for (Node node : nodes.getNodes ()) {
-                    nodeId = node.getId ();
-                }
-            }
-        });
+            public void run () {
+                NodeApi.GetLocalNodeResult nodes = Wearable.NodeApi.getLocalNode (mGoogleApiClient).await ();
+                NodeApi.GetConnectedNodesResult conNodes = Wearable.NodeApi.getConnectedNodes (mGoogleApiClient).await ();
+//                nodeId = nodes.getNode ().getId ();
+/*for (Node node: conNodes.getNodes ()){
 
+    System.out.println ("connectedNODE_wearable: " + node.getId () );
+}*/
+
+
+                //System.out.println ("LOCALNODE_wearable: " + nodeId );
+
+                //        new WearableActivityTask().execute ("LIST","GEN.CO");
+            }
+        }).start ();
         requestQuotes (MainWearableActivity.this.getWindow ().getCurrentFocus ());
     }
 
@@ -177,7 +243,6 @@ public class MainWearableActivity extends Activity implements
         try {
             for (DataEvent event : dataEvents) {
 
-
                 nodeId = event.getDataItem ().getUri ().getHost ();
 
                 if (event.getType () == DataEvent.TYPE_CHANGED) {
@@ -187,33 +252,21 @@ public class MainWearableActivity extends Activity implements
                     ArrayList<String> quotesList = dataMapItem.getDataMap ()
                             .getStringArrayList ("content");
 
-
-                    quotesArrayList.clear ();
+                    adapter.clear ();
                     int index = 0;
                     for (String quote : quotesList) {
-                        String[] quoteChunks = quote.split ("::");
-
-                        quotesArrayList.add (new StringBuilder (quoteChunks[0])
-                                .append (": ")
-                                .append (quoteChunks[1])
-                                .append (" \n")
-                                .append (quoteChunks[2]).toString ());
-
-
+                        adapter.add (quote);
                     }
 
-                    adapter.notifyDataSetChanged ();
+                    // adapter.notifyDataSetChanged ();
                     Time now = new Time ();
                     now.setToNow ();
                     String lastUdate = now.format ("%H:%M:%S");
-
 
                     lastUpdateTextView.setText (lastUdate);
                     lastUpdateTextView.clearAnimation ();
                 }
             }
-
-
         } catch (Exception e) {
             e.printStackTrace ();
         }
@@ -224,9 +277,7 @@ public class MainWearableActivity extends Activity implements
         LOGD (TAG, "onMessageReceived: " + event);
 //        /**/mDataFragment.appendItem("Message", event.toString());
 
-     /*   Toast.makeText (MainWearableActivity.this,event.getData ().toString (),Toast.LENGTH_LONG);
-
-        lastUpdateTextView.setText (new String(event.getData ()));*/
+        Toast.makeText (MainWearableActivity.this, event.getData ().toString (), Toast.LENGTH_LONG);
         ///event.getData ();
     }
 
@@ -249,7 +300,7 @@ public class MainWearableActivity extends Activity implements
 
             String stockCode = args[1];
 
-            MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage (mGoogleApiClient, nodeId, PATH,
+            MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage (mGoogleApiClient, "b633274e", PATH,
                     stockCode.getBytes ()).await ();
 
             if (!result.getStatus ().isSuccess ()) {
