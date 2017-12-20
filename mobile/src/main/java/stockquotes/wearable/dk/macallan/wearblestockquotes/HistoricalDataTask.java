@@ -74,12 +74,18 @@ class HistoricalDataTask extends AsyncTask<String, Void, String> {
 
     @Override
     protected void onPostExecute (String res) {
+
+        if ("".equals (res)) {
+            return;
+        }
+
         String[] historicalRatesAndDates = res.split (":::");
 
-        if (historicalRatesAndDates.length > 1)
+        if (historicalRatesAndDates.length > 1) {
             for (int i = 0; i < (historicalRatesAndDates.length); i = i + 3) {
                 histDB.insertHistoricals (historicalRatesAndDates[i],
                         historicalRatesAndDates[i + 1], historicalRatesAndDates[i + 2]);
             }
+        }
     }
 }

@@ -19,7 +19,6 @@ import android.widget.Toast;
 
 import com.google.android.gms.ads.AdView;
 
-import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
 import org.joda.time.format.DateTimeFormat;
@@ -203,14 +202,25 @@ public class MainActivity extends Activity {
 
         ArrayList<HashMap<String, String>> theArrayList = new ArrayList<> ();
         Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
+
         while (cursor.moveToNext ()) {
 
             HashMap<String, String> theMap = new HashMap<String, String> ();
 
             String jsonData = cursor.getString (4);
 
-            if (jsonData == null || "null".equalsIgnoreCase (jsonData))
+            if (jsonData == null || "null".equalsIgnoreCase (jsonData)) {
+                String stockCode = cursor.getString (1);
+                theMap.put ("NAME", stockCode + " waiting for data");
+                theMap.put ("LTP", "");
+                theMap.put ("LTT", "");
+                theMap.put ("CHANGE", "");
+                theMap.put ("CHANGE_PCT", "");
+                theMap.put ("RSI", "");
+                theMap.put ("SYMBOL", "");
+                theArrayList.add (theMap);
                 continue;
+            }
 
             try {
                 JSONObject jsonQueryObj = new JSONObject (jsonData);
@@ -246,11 +256,6 @@ public class MainActivity extends Activity {
             }
 
         }
-        DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm:ss");
-        LocalTime lastUpdate = new DateTime ().toLocalTime ();
-
-        // ((TextView) findViewById (R.id.lastUpdated)).setText ("Last update: \n" + fmt.print (lastUpdate));
-
 
         return theArrayList;
     }

@@ -74,11 +74,23 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                 if (this.getCount () > 0) {
                     //txt = this.getItem (position);
                     hashMap = this.getItem (position);
-                    theChange = hashMap.get ("CHANGE").toString () + "/" + hashMap.get ("CHANGE_PCT").toString ();
+                    if ("".equals (hashMap.get ("CHANGE").toString ()))
+                        theChange = "";
+                    else {
+                        theChange = hashMap.get ("CHANGE").toString () + "/" + hashMap.get ("CHANGE_PCT").toString ();
+                    }
                     TextView tvName = ((TextView) view.findViewById (R.id.stock_name));
                     tvName.setText (hashMap.get ("NAME").toString ());
+
+                    if ("".equals (hashMap.get ("LTP").toString ())) {
+
+                        blink (tvName, -1, 2000);
+                    }
+
                     TextView tvLTP = ((TextView) view.findViewById (R.id.stock_rate));
                     tvLTP.setText (hashMap.get ("LTP").toString ());
+
+
                     TextView tvCng = ((TextView) view.findViewById (R.id.change));
                     tvCng.setText (theChange);
                     TextView tvLTD = ((TextView) view.findViewById (R.id.last_trade_date));
@@ -113,7 +125,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                         }
                     }
                 }
-                blink (view);
+                blink (view, 0, 750);
 
                 return view;
             }
@@ -170,12 +182,12 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
 
     }
 
-    private void blink (View view) {
+    private void blink (View view, int repeatCount, long duration) {
         Animation anim = new AlphaAnimation (0.0f, 1.0f);
-        anim.setDuration (750); //You can manage the time of the blink with this parameter
-        //anim.setStartOffset (20);
-        //anim.setRepeatMode (Animation.REVERSE);
-        //anim.setRepeatCount (1);
+        anim.setDuration (duration); //You can manage the time of the blink with this parameter
+        //  anim.setStartOffset (20);
+        // anim.setRepeatMode (Animation.REVERSE);
+        anim.setRepeatCount (repeatCount);
        /* lastUpdateTextView.setText ("WAITING FOR DATA...");
         lastUpdateTextView.startAnimation (anim);*/
         view.startAnimation (anim);
@@ -191,25 +203,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
         adapter.notifyDataSetChanged ();
     }
 
-    /*public void setViewListData (String[] data) {
-        setViewListData (new ArrayList<> (Arrays.asList (data)));
-    }*/
-/*
-    public void setViewListData (ArrayList<String> data) {
-        getStocksList ().clear ();
 
-        for (String str : data) {
-            getStocksList ().add (str);
-
-        }
-        populateListView ();
-    }
-*/
-   /* public ArrayList<String> getStocksList () {
-
-        return quotesArrayList;
-    }
-*/
     @Override
     public boolean onItemLongClick (AdapterView<?> parent, View view, int position, long id) {
         return false;

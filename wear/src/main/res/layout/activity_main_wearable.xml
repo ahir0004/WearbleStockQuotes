@@ -39,7 +39,7 @@
             android:layout_height="match_parent"/>
     </FrameLayout>
 
-    <TextView
+    <TextClock
         android:id="@+id/last_updated"
         android:layout_width="fill_parent"
         android:layout_height="0dp"
@@ -47,6 +47,7 @@
         android:background="@android:color/background_dark"
         android:gravity="center"
         android:scrollbars="vertical"
-        android:textColor="@android:color/white"/>
+        android:textColor="@android:color/white"
+        android:timeZone="Europe/Copenhagen"/>
 
 </LinearLayout>

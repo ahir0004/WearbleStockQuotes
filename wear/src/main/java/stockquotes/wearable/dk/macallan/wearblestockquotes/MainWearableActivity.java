@@ -47,7 +47,7 @@ public class MainWearableActivity extends Activity implements
     private ArrayAdapter<String> adapter;
     private ListView listView;
     private ImageView imageView;
-    private TextView lastUpdateTextView;
+    //    private TextView lastUpdateTextView;
     private String nodeId;
     private GoogleApiClient mGoogleApiClient;
     private ArrayList<String> quotesArrayList = new ArrayList<> ();
@@ -69,7 +69,7 @@ public class MainWearableActivity extends Activity implements
 
         listView = (ListView) findViewById (R.id.list);
         imageView = (ImageView) findViewById (R.id.updateView);
-        lastUpdateTextView = (TextView) findViewById (R.id.last_updated);
+//        lastUpdateTextView = (TextView) findViewById (R.id.last_updated);
 
         adapter = new ArrayAdapter<String> (getBaseContext (),
                 R.layout.wearable_list_layout) {
@@ -145,8 +145,8 @@ public class MainWearableActivity extends Activity implements
         anim.setStartOffset (20);
         anim.setRepeatMode (Animation.REVERSE);
         anim.setRepeatCount (Animation.INFINITE);
-        lastUpdateTextView.setText ("WAITING FOR DATA...");
-        lastUpdateTextView.startAnimation (anim);
+//        lastUpdateTextView.setText ("WAITING FOR DATA...");
+//        lastUpdateTextView.startAnimation (anim);
     }
 
     protected void requestQuotes (View view) {
@@ -263,8 +263,8 @@ public class MainWearableActivity extends Activity implements
                     now.setToNow ();
                     String lastUdate = now.format ("%H:%M:%S");
 
-                    lastUpdateTextView.setText (lastUdate);
-                    lastUpdateTextView.clearAnimation ();
+//                    lastUpdateTextView.setText (lastUdate);
+//                    lastUpdateTextView.clearAnimation ();
                 }
             }
         } catch (Exception e) {

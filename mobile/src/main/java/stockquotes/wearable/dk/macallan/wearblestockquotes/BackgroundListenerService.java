@@ -1,10 +1,12 @@
 package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
+import android.app.Service;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.widget.Toast;
@@ -52,6 +54,8 @@ public class BackgroundListenerService extends WearableListenerService {
     private String nodeId;
     private List<Node> nodes;
     private StockListDB stockListDB;
+    private PowerManager.WakeLock wakeLock;
+
 
     private Runnable pollQuotesRunnable = new Runnable() {
         @Override
@@ -66,7 +70,6 @@ public class BackgroundListenerService extends WearableListenerService {
         new Thread(new Runnable() {
 
             @Override
-
             public void run() {
 
                /* NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi.getConnectedNodes( client ).await();
@@ -159,6 +162,11 @@ public class BackgroundListenerService extends WearableListenerService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        PowerManager powerManager = (PowerManager) getSystemService (POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock (PowerManager.PARTIAL_WAKE_LOCK,
+                "MyWakelockTag");
+        wakeLock.acquire ();
+
         getHistoricalData();
 
         client = new GoogleApiClient.Builder(this).addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
@@ -187,7 +195,7 @@ public class BackgroundListenerService extends WearableListenerService {
         Toast.makeText(BackgroundListenerService.this, " TOAST_FROM_SERVICE", Toast.LENGTH_LONG);
 
         // getNode();
-        return START_STICKY;
+        return Service.START_STICKY;
     }
 
     @Override
@@ -197,6 +205,16 @@ public class BackgroundListenerService extends WearableListenerService {
         pollQuotesHandler.postDelayed(pollQuotesRunnable, 1000);
         stockListDB = StockListDB.getInstance (getApplicationContext ());
     }
+
+    @Override
+    public void onDestroy () {
+        if (wakeLock.isHeld ()) {
+            wakeLock.release ();
+        }
+        super.onDestroy ();
+    }
+
+
 
     private void getHistoricalData() {
         for (String stockCode : getRequestCodes()) {
@@ -377,6 +395,7 @@ public class BackgroundListenerService extends WearableListenerService {
 */
             try {
                 htmlScrape = Jsoup.connect (sb.toString ()).maxBodySize (270000).get ().html ();
+
             } catch (IOException e) {
                 e.printStackTrace ();
             }

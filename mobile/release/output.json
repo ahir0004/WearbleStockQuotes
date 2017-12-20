@@ -1,0 +1,18 @@
+[
+  {
+    "outputType": {
+      "type": "APK"
+    },
+    "apkInfo": {
+      "type": "MAIN",
+      "splits": [],
+      "versionCode": 2
+    },
+    "path": "mobile-release.apk",
+    "properties": {
+      "packageId": "stockquotes.wearable.dk.macallan.wearblestockquotes",
+      "split": "",
+      "minSdkVersion": "21"
+    }
+  }
+]
