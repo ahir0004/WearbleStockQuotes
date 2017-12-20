@@ -81,8 +81,8 @@ public class MainActivity extends Activity {
         setContentView (R.layout.activity_main);
        /* mAdView = (AdView) findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().build();
-        mAdView.loadAd(adRequest);*/
-
+        mAdView.loadAd(adRequest);
+*/
         // Issue the notification
         notificationManager =
                 NotificationManagerCompat.from (this);
@@ -172,8 +172,9 @@ public class MainActivity extends Activity {
                 }
             });
         }
+/*
 
-       /* client = new GoogleApiClient.Builder (this)
+        client = new GoogleApiClient.Builder (this)
                 .addApi (Wearable.API)
                 .addConnectionCallbacks (this)
                 .addOnConnectionFailedListener (this)

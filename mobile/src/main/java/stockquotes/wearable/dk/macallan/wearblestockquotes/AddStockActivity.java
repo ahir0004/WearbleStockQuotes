@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.view.View;
@@ -64,14 +65,56 @@ public class AddStockActivity extends Activity {
             }
         });
 
+        LinearLayout linearLayoutHorizontal = new LinearLayout (this);
         Button addStockbutton = new Button (this);
+        Button help = new Button (this);
+        help.setText ("?");
+        help.setTextSize (24);
+        help.setTypeface (help.getTypeface (), Typeface.BOLD);
         addStockbutton.setText ("Add stock");
         LinearLayout linearLayout = new LinearLayout (this);
         linearLayout.setOrientation (LinearLayout.VERTICAL);
-        linearLayout.addView (editText);
+        linearLayoutHorizontal.setWeightSum (6);
+        editText.setLayoutParams (new LinearLayout.LayoutParams (LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, 5.9f));
+        linearLayoutHorizontal.addView (editText);
+        help.setLayoutParams (new LinearLayout.LayoutParams (LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, 0.1f));
+        linearLayoutHorizontal.addView (help);
+
+        linearLayout.addView (linearLayoutHorizontal);
         linearLayout.addView (addStockbutton);
 
         linearLayout.addView (listView);
+
+
+        help.setOnClickListener (new View.OnClickListener () {
+            @Override
+            public void onClick (View v) {
+                StringBuilder sb = new StringBuilder ("Stock codes should be entered \n");
+                sb.append ("in a Yahoo finance way (https://finance.yahoo.com/).\n\n");
+                sb.append ("Example: \n");
+                sb.append ("Facebook has stock code: FB\n");
+                sb.append ("Disney has stock code: DIS\n\n");
+                sb.append ("Find codes at: https://finance.yahoo.com.\n\n");
+                sb.append ("To REMOVE a stock from the list:\n");
+                sb.append ("long-press the desired stock item in the list.\n\n");
+                sb.append ("When done entering stockcodes\n");
+                sb.append ("just hit Back-button to return to live list.");
+                new AlertDialog.Builder (AddStockActivity.this)
+                        //.setIcon (android.R.drawable.mdialog_holo_light_frame)
+                        .setTitle ("How to enter stock codes")
+                        .setMessage (sb.toString ())
+                        .setPositiveButton ("Close", new DialogInterface.OnClickListener () {
+                            @Override
+                            public void onClick (DialogInterface dialog, int which) {
+                            }
+
+                        })
+                        //.setNegativeButton ("No", null)
+                        .show ();
+
+                //return true;
+            }
+        });
 
         addStockbutton.setOnClickListener (new View.OnClickListener () {
             @Override
