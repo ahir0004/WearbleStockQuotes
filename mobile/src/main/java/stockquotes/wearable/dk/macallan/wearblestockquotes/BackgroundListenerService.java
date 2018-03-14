@@ -23,7 +23,6 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.wearable.WearableListenerService;
 
-import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
 import org.joda.time.format.DateTimeFormat;
@@ -34,11 +33,8 @@ import org.jsoup.Jsoup;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 import static com.google.android.gms.wearable.DataMap.TAG;
 
@@ -48,12 +44,8 @@ public class BackgroundListenerService extends WearableListenerService {
     private static final String SEND_MORE_MONEY_PATH = "SEND_MORE_MONEY";
     private static final String NOTIFICATION_CONTENT = "content";
     Handler pollQuotesHandler;
-    //private List<String> quotesArrayList = Collections.synchronizedList (new ArrayList<String> ());
-    private int counter = 0;
     private GoogleApiClient client;
     private String nodeId;
-    private List<Node> nodes;
-    private StockListDB stockListDB;
     private PowerManager.WakeLock wakeLock;
 
 
@@ -72,77 +64,20 @@ public class BackgroundListenerService extends WearableListenerService {
             @Override
             public void run() {
 
-               /* NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi.getConnectedNodes( client ).await();
+                NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi.getConnectedNodes (client).await ();
 
                 for(Node node : nodes.getNodes()) {
-                    System.out.println (node.getId ());
+                    nodeId = node.getId ();
                 }
-*/
                 MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage(
 
-                        client, "ce7d7706", path, "AllanwasHere".getBytes()).await();
-  /*                  System.out.println ("CONNECTED nODE: " + node.getId ());
-                }
-*/
-
+                        client, nodeId, path, "AllanwasHere".getBytes ()).await ();
 
             }
 
         }).start();
     }
 
-    private void sendNotification () {
-//        if (client.isConnected ()) {
-
-
-        PutDataMapRequest dataMapRequest = PutDataMapRequest.create(NOTIFICATION_PATH);
-        // Make sure the data item is unique. Usually, this will not be required, as the payload
-        // (in this case the title and the content of the notification) will be different for almost all
-        // situations. However, in this example, the text and the content are always the same, so we need
-        // to disambiguate the data item by adding a field that contains teh current time in milliseconds.
-/*
-
-        JSONObject jsonQueryObj = jsonObj.getJSONObject("query").getJSONObject("results").getJSONObject("quote");
-
-        String name = jsonQueryObj.getString("Name");
-        String rate = jsonQueryObj.getString("LastTradePriceOnly");
-        String deltaRate = jsonQueryObj.getString("Change");
-        String deltaRatePercent = jsonQueryObj.getString("PercentChange");
-
-        getRequestCodes ()
-*/
-        ArrayList<String> theArrayList = new ArrayList<String> ();
-        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
-
-        while (cursor.moveToNext ()) {
-
-
-            JSONObject jsonQueryObj = null;
-            try {
-                jsonQueryObj = new JSONObject (cursor.getString (4));
-
-                StringBuilder sb = new StringBuilder ();
-                sb.append (jsonQueryObj.getString ("Name"));
-                sb.append ("\n");
-                sb.append (jsonQueryObj.getString ("LastTradePriceOnly"));
-                sb.append ("   ");
-                sb.append (jsonQueryObj.getString ("Change"));
-                sb.append (" / ");
-                sb.append (jsonQueryObj.getString ("PercentChange"));
-
-                theArrayList.add (sb.toString ());
-
-            } catch (JSONException e) {
-                e.printStackTrace ();
-            }
-
-        }
-
-        dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, theArrayList);
-        PutDataRequest putDataRequest = dataMapRequest.asPutDataRequest();
-
-        Wearable.DataApi.putDataItem(client, putDataRequest);
-    }
 
     protected String[] getRequestCodes() {
         Cursor cursor = StockListDB.getInstance (BackgroundListenerService.this).readStockCodes ();
@@ -194,7 +129,6 @@ public class BackgroundListenerService extends WearableListenerService {
         client.connect();
         Toast.makeText(BackgroundListenerService.this, " TOAST_FROM_SERVICE", Toast.LENGTH_LONG);
 
-        // getNode();
         return Service.START_STICKY;
     }
 
@@ -203,7 +137,6 @@ public class BackgroundListenerService extends WearableListenerService {
         super.onCreate();
         pollQuotesHandler = new Handler();
         pollQuotesHandler.postDelayed(pollQuotesRunnable, 1000);
-        stockListDB = StockListDB.getInstance (getApplicationContext ());
     }
 
     @Override
@@ -212,6 +145,8 @@ public class BackgroundListenerService extends WearableListenerService {
             wakeLock.release ();
         }
         super.onDestroy ();
+
+        //  sendBroadcast ();
     }
 
 
@@ -240,17 +175,15 @@ public class BackgroundListenerService extends WearableListenerService {
 
     }
 
+
     @Override
     public void onMessageReceived(MessageEvent messageEvent) {
-        String theTxt = new String (messageEvent.getData ());
-        String thePath = new String (messageEvent.getPath ()),
-                nodeId = messageEvent.getSourceNodeId ();
 
         new Thread (new Runnable () {
             @Override
             public void run () {
                 if (client.isConnected ()) {
-                    PutDataMapRequest dataMapRequest = PutDataMapRequest.create ("/" + UUID.randomUUID ().toString ());
+                    PutDataMapRequest dataMapRequest = PutDataMapRequest.create ("/QUOTES");
                     dataMapRequest.getDataMap ().putStringArrayList (NOTIFICATION_CONTENT, getQuotes ());
                     PutDataRequest putDataRequest = dataMapRequest.asPutDataRequest ();
 
@@ -286,28 +219,12 @@ public class BackgroundListenerService extends WearableListenerService {
         return quotesList.toArray(new String[quotesList.size()]);
     }
 
-    private String getRSI (int index, String liveRate) {
-
-        if (getRequestCodes ().length == index || getRequestCodes ().length < index) {
-            return "";
-        }
-
-        String stockName = getRequestCodes ()[index].split ("::")[1];
-
-        double rsiIndicator = 0.0;
-        RSI rsi = new RSI (14, stockName.toUpperCase (), stockListDB, liveRate);
-
-        return rsi.calculate ();
-
-    }
-
     private ArrayList<String> getQuotes () {
 
         ArrayList<String> theArrayList = new ArrayList<> ();
         Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readStockCodes ();
         while (cursor.moveToNext ()) {
 
-            HashMap<String, String> theMap = new HashMap<String, String> ();
 
             String jsonData = cursor.getString (4);
 
@@ -316,7 +233,6 @@ public class BackgroundListenerService extends WearableListenerService {
 
             try {
                 JSONObject jsonQueryObj = new JSONObject (jsonData);
-                String symbol = jsonQueryObj.getString ("symbol");
                 String ltp = jsonQueryObj.getJSONObject ("regularMarketPrice").getString ("fmt").replace (",", "");
                 String tempDelta = jsonQueryObj.getJSONObject ("regularMarketChangePercent").getString ("fmt");
 
@@ -327,15 +243,6 @@ public class BackgroundListenerService extends WearableListenerService {
                 String lastTradeTime = jsonQueryObj.getString ("regularMarketTime");
                 DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm");
                 LocalTime lastUpdate = new LocalDateTime (new Long (lastTradeTime) * 1000).toLocalTime ();
-/*
-                theMap.put ("NAME", name);
-                theMap.put ("LTP", ltp);
-                theMap.put ("LTT", fmt.print (lastUpdate));
-                theMap.put ("CHANGE", change);
-                theMap.put ("CHANGE_PCT", deltaRatePercent + "%");
-                theMap.put ("RSI", new RSI (14, symbol, stockListDB, ltp).calculate ());
-                theMap.put ("SYMBOL", jsonQueryObj.getString ("symbol"));
-*/
 
                 StringBuilder sb = new StringBuilder ();
                 sb.append (name);
@@ -357,11 +264,6 @@ public class BackgroundListenerService extends WearableListenerService {
             }
 
         }
-        DateTimeFormatter fmt = DateTimeFormat.forPattern ("HH:mm:ss");
-        LocalTime lastUpdate = new DateTime ().toLocalTime ();
-
-        // ((TextView) findViewById (R.id.lastUpdated)).setText ("Last update: \n" + fmt.print (lastUpdate));
-
 
         return theArrayList;
     }
@@ -376,45 +278,16 @@ public class BackgroundListenerService extends WearableListenerService {
 
             StringBuilder sb = new StringBuilder ();
             sb.append ("https://finance.yahoo.com/quote/");
-            // sb.append("https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22");
             sb.append (urls[0]);
             sb.append ("?p=");
             sb.append (urls[0]);
             sb.append (")");
-                //sb.append("%22)&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=");
-
-       /*         URL url = new URL(sb.toString());
-
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-
-                if (conn.getResponseCode() != 200) {
-                    Toast.makeText (getApplicationContext (), "NO YAHOO CONNECTION!", Toast.LENGTH_LONG).show ();
-                    return "";
-                }
-*/
             try {
                 htmlScrape = Jsoup.connect (sb.toString ()).maxBodySize (270000).get ().html ();
 
             } catch (IOException e) {
                 e.printStackTrace ();
             }
-       /*
-                BufferedReader br = new BufferedReader(new InputStreamReader(
-                        (conn.getInputStream())));
-
-                String output;
-                System.out.println("Output from Server .... \n");
-                while ((output = br.readLine()) != null) {
-                    chunks.append(output);
-                }
-
-                String htmlScrape = chunks.toString ().split ("\\},\"price\":")[1]
-                        .split (",\"financialData\"")[0];
-
-                chunks.setLength (0);
-                chunks.append (htmlScrape).append (":::").append (urls[0]);
-                conn.disconnect();*/
 
             String retVal = "";
             if (htmlScrape.length () > 1) {

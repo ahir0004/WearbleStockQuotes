@@ -67,7 +67,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
 
                 LayoutInflater inflater = ((MainActivity) getContext ()).getLayoutInflater ();
                 View view = inflater.inflate (R.layout.list_layout, null, true);
-                //view.setBackgroundColor (Color.WHITE);
+                view.setBackgroundColor (Color.rgb (40, 40, 40));
                 HashMap hashMap;
                 String theChange = "";
 
@@ -108,7 +108,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                         //tvRSI.setBackgroundResource (R.mipmap.up);
                     }
 
-                    if (getRequestCodes ().length > 0 && getRequestCodes ().length > position) {
+                    /*if (getRequestCodes ().length > 0 && getRequestCodes ().length > position) {
 
                         // String stockCode = getRequestCodes ()[position].split (":")[1];
                         //long stockId = stockListDB.getIdFromStockCode (hashMap.get ("NAME").toString ());
@@ -121,9 +121,9 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
                         }
 
                         if (isSuspended == 1) {
-                            view.getBackground ().setAlpha (150);
+                                view.setAlpha (0.5f);
                         }
-                    }
+                    }*/
                 }
                 blink (view, 0, 750);
 

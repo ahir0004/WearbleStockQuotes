@@ -282,6 +282,13 @@ public class GraphActivity extends Activity {
         return theAverage / 60.0;
     }
 
+    @Override
+    protected void onPause () {
+
+        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        super.onPause ();
+    }
+
     private class ChartView extends View {
 
         double lineCoords[] = new double[(stockValues.size () + stockDates.size ())];

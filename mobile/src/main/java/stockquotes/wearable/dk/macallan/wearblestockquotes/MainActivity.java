@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -17,6 +18,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 
 import org.joda.time.LocalDateTime;
@@ -79,10 +81,9 @@ public class MainActivity extends Activity {
         startService (theServiceIntent);
 
         setContentView (R.layout.activity_main);
-       /* mAdView = (AdView) findViewById(R.id.adView);
+        mAdView = (AdView) findViewById (R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().build();
         mAdView.loadAd(adRequest);
-*/
         // Issue the notification
         notificationManager =
                 NotificationManagerCompat.from (this);
@@ -121,7 +122,7 @@ public class MainActivity extends Activity {
                 public boolean onItemLongClick (AdapterView<?> parent, View view, int position, long id) {
 
 
-                    HashMap<String, String> items = (HashMap) parent.getItemAtPosition (position);
+                   /* HashMap<String, String> items = (HashMap) parent.getItemAtPosition (position);
                     String stockName = items.get ("NAME");
 
                     StringBuilder sb = new StringBuilder (stockName);
@@ -129,12 +130,13 @@ public class MainActivity extends Activity {
                     if (stockListDB.isNotifySuspended (stockName.hashCode ())) {
 
                         stockListDB.updateSuspendNotification (stockName.hashCode (), 0);
-                        view.getBackground ().setAlpha (255);
+                        view.setAlpha (1f);
                         sb.append (" has enabled notifications.");
 
                     } else {
                         stockListDB.updateSuspendNotification (stockName.hashCode (), 1);
-                        view.getBackground ().setAlpha (150);
+                        Drawable backGround = view.getBackground ();
+                        view.setAlpha (0.5f);
                         sb.append (" has suspended notifications.");
 
                     }
@@ -143,7 +145,8 @@ public class MainActivity extends Activity {
                             sb.toString (), Toast.LENGTH_LONG).show ();
 
 
-                    return true;
+                    return true;*/
+                    return false;
                 }
             });
 
@@ -172,14 +175,8 @@ public class MainActivity extends Activity {
                 }
             });
         }
-/*
 
-        client = new GoogleApiClient.Builder (this)
-                .addApi (Wearable.API)
-                .addConnectionCallbacks (this)
-                .addOnConnectionFailedListener (this)
-                .build ();
-*/
+
         pollQuotes.postDelayed (pollQuotesRunnable, 1000);
 
     }
@@ -188,7 +185,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume () {
         super.onResume ();
-
+        int orient = getRequestedOrientation ();
+        System.out.println ("ORIENTATION: " + orient);
+        // if(orient != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        //}
         refreshList ();
     }
 
@@ -247,9 +248,9 @@ public class MainActivity extends Activity {
 
                 theArrayList.add (theMap);
 
-                if (deltaRatePercent != null || !deltaRatePercent.equals ("null")) {
+              /*  if (deltaRatePercent != null || !deltaRatePercent.equals ("null")) {
                     pushNotification (symbol, name, deltaRatePercent);
-                }
+                }*/
 
             } catch (JSONException e) {
                 e.printStackTrace ();

@@ -10,12 +10,14 @@
               android:paddingLeft="@dimen/activity_horizontal_margin"
               android:paddingRight="@dimen/activity_horizontal_margin"
               android:paddingTop="@dimen/activity_vertical_margin"
+              android:weightSum="5"
               tools:context="stockquotes.wearable.dk.macallan.wearblestockquotes.MainActivity">
 
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="48dp"
+        android:layout_weight="0.2"
         android:gravity="end"
         android:orientation="horizontal">
 
@@ -34,11 +36,30 @@
             android:layout_height="match_parent"
             android:layout_gravity="end"
             android:background="@android:color/black"
+            android:contentDescription="TODO"
             android:scaleType="fitXY"
             android:src="@drawable/white_refresh_02"
-            android:text="Refresh"/>
+            android:text="@string/refresh"/>
 
     </LinearLayout>
+
+    <stockquotes.wearable.dk.macallan.wearblestockquotes.StockListView
+        android:id="@+id/list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="4"
+        android:paddingBottom="20dp"
+        android:paddingTop="20dp">
+    </stockquotes.wearable.dk.macallan.wearblestockquotes.StockListView>
+
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        ads:adSize="LARGE_BANNER"
+        ads:adUnitId="@string/banner_ad_unit_id">
+    </com.google.android.gms.ads.AdView>
 
     <!--ScrollView
         android:layout_width="match_parent"
@@ -47,21 +68,7 @@
         android:background="@color/white"
         android:fillViewport="true"-->
 
-        <stockquotes.wearable.dk.macallan.wearblestockquotes.StockListView
-            android:id="@+id/list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-        </stockquotes.wearable.dk.macallan.wearblestockquotes.StockListView>
     <!--/ScrollView-->
 
 
-    <com.google.android.gms.ads.AdView
-        android:id="@+id/adView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        ads:adSize="LARGE_BANNER"
-        ads:adUnitId="@string/banner_ad_unit_id">
-    </com.google.android.gms.ads.AdView>
 </LinearLayout>

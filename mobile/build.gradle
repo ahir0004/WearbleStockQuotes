@@ -19,8 +19,8 @@ android {
         applicationId "stockquotes.wearable.dk.macallan.wearblestockquotes"
         minSdkVersion 21
         targetSdkVersion 25
-        versionCode 4
-        versionName '1.0.4'
+        versionCode 9
+        versionName '1.0.9'
     }
     buildTypes {
         release {

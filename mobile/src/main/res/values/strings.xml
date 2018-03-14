@@ -4,4 +4,5 @@
     <string name="add_stock_title">Add new Stock</string>
     <string name="hello_world">Hello List</string>
     <string name="banner_ad_unit_id">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="refresh">Refresh</string>
 </resources>
