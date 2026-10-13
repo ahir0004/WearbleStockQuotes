@@ -3,11 +3,13 @@ package stockquotes.wearable.dk.macallan.wearblestockquotes;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Typeface;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
+import android.os.Handler;
+import android.os.Looper;
+import androidx.appcompat.app.AlertDialog;
+import androidx.work.WorkManager;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -16,8 +18,13 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Created by AHI003 on 07-11-2016.
@@ -27,6 +34,11 @@ public class AddStockActivity extends Activity {
     private StockListDB stockListDB;
     private ListView listView;
     private ArrayAdapter<String> arrayAdapter;
+    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor ();
+    private final Handler mainHandler = new Handler (Looper.getMainLooper ());
+    // main-thread only
+    private boolean destroyed;
+
     @Override
     public void onCreate (Bundle bundle) {
         super.onCreate (bundle);
@@ -37,8 +49,12 @@ public class AddStockActivity extends Activity {
         editText = new EditText (this);
 
         listView = new ListView (this);
-        arrayAdapter = new ArrayAdapter<String> (this, android.R.layout.simple_list_item_1, getQuotesList ());
+        arrayAdapter = new ArrayAdapter<String> (this, android.R.layout.simple_list_item_1, new ArrayList<String> ());
         listView.setAdapter (arrayAdapter);
+        runInBackground (() -> {
+            final ArrayList<String> codes = getQuotesList ();
+            postIfAlive (() -> arrayAdapter.addAll (codes));
+        });
         //listView.isOnItemClickable (true);
         listView.setOnItemLongClickListener (new AdapterView.OnItemLongClickListener () {
             @Override
@@ -52,9 +68,11 @@ public class AddStockActivity extends Activity {
                             @Override
                             public void onClick (DialogInterface dialog, int which) {
                                 String stockCode = parent.getItemAtPosition (position).toString ();
-                                stockListDB.removeStockFromDB (stockCode);
-                                arrayAdapter.remove (stockCode);
-                                arrayAdapter.notifyDataSetChanged ();
+                                runInBackground (() -> {
+                                    stockListDB.removeStockFromDB (stockCode);
+                                    WorkManager.getInstance (getApplicationContext ()).cancelUniqueWork (HistoricalDataWorker.uniqueWorkName (stockCode));
+                                    postIfAlive (() -> arrayAdapter.remove (stockCode));
+                                });
                             }
 
                         })
@@ -119,38 +137,73 @@ public class AddStockActivity extends Activity {
         addStockbutton.setOnClickListener (new View.OnClickListener () {
             @Override
             public void onClick (View v) {
-                String stockCode = editText.getText ().toString ().toUpperCase ();
+                String stockCode = editText.getText ().toString ().trim ().toUpperCase (Locale.ROOT);
                 if ("".equals (stockCode))
                     return;
 
-                editText.setText ("");
-                stockListDB.insert (stockCode);
-                long id = stockListDB.getIdFromStockCode (stockCode);
-
-                if (id != -1l) {
-                    hideKeyboard ();
-                    arrayAdapter.add (stockCode);
-                    arrayAdapter.notifyDataSetChanged ();
-                    HistoricalDataTask hdt = new HistoricalDataTask (getApplicationContext ());
-                    hdt.execute (stockCode);
-                }
+                runInBackground (() -> {
+                    final boolean exists = stockListDB.stockExists (stockCode);
+                    final long rowId = exists ? -1 : stockListDB.insert (stockCode);
+                    if (rowId != -1)
+                        HistoricalDataWorker.enqueue (getApplicationContext (), stockCode);
+                    postIfAlive (() -> onStockAdded (stockCode, exists, rowId));
+                });
             }
         });
 
 
         //listView.initList ();
-        Intent theServiceIntent = new Intent (AddStockActivity.this, BackgroundListenerService.class);
-        startService (theServiceIntent);
 
         setContentView (linearLayout);
 
     }
 
+    @Override
+    protected void onDestroy () {
+        destroyed = true;
+        // shutdown, not shutdownNow, so already-confirmed inserts/deletes still complete
+        dbExecutor.shutdown ();
+        mainHandler.removeCallbacksAndMessages (null);
+        super.onDestroy ();
+    }
+
+    private void runInBackground (Runnable task) {
+        try {
+            dbExecutor.execute (task);
+        } catch (RejectedExecutionException ignored) {
+        }
+    }
+
+    private void postIfAlive (Runnable action) {
+        mainHandler.post (() -> {
+            if (destroyed || isFinishing ())
+                return;
+            action.run ();
+        });
+    }
+
+    private void onStockAdded (String stockCode, boolean exists, long rowId) {
+        if (exists) {
+            Toast.makeText (AddStockActivity.this, getString (R.string.stock_already_added, stockCode), Toast.LENGTH_SHORT).show ();
+            return;
+        }
+
+        editText.setText ("");
+        if (rowId == -1) {
+            Toast.makeText (AddStockActivity.this, getString (R.string.stock_add_failed, stockCode), Toast.LENGTH_SHORT).show ();
+            return;
+        }
+
+        hideKeyboard ();
+        arrayAdapter.add (stockCode);
+    }
+
     private ArrayList<String> getQuotesList () {
         ArrayList<String> theList = new ArrayList<> ();
-        Cursor cursor = stockListDB.readStockCodes ();
-        while (cursor.moveToNext ()) {
-            theList.add (cursor.getString (1));
+        try (Cursor cursor = stockListDB.readStockCodes ()) {
+            while (cursor.moveToNext ()) {
+                theList.add (cursor.getString (1));
+            }
         }
         return theList;
     }

@@ -3,12 +3,15 @@ package stockquotes.wearable.dk.macallan.wearblestockquotes;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import org.joda.time.DateTime;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by macallan on 17-09-16.
@@ -17,9 +20,15 @@ public class StockListDB extends SQLiteOpenHelper {
     private static String DATABASE_NAME = "wearable_stocks.db";
     private static int VERSION = 1;
     private static StockListDB sInstance;
+    // bumped after every committed write that changes the main stock list
+    private final AtomicLong dataVersion = new AtomicLong ();
 
     private StockListDB (Context context) {
         super (context, DATABASE_NAME, null, VERSION);
+    }
+
+    public long getDataVersion () {
+        return dataVersion.get ();
     }
 
     public static synchronized StockListDB getInstance (Context context) {
@@ -63,9 +72,15 @@ public class StockListDB extends SQLiteOpenHelper {
         values.put ("SUSPEND_NOTIFICATION", 0);
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase ();
         sqLiteDatabase.beginTransaction ();
-        long rowID = sqLiteDatabase.insert ("STOCK_QUOTES", null, values);
-        sqLiteDatabase.setTransactionSuccessful ();
-        sqLiteDatabase.endTransaction ();
+        long rowID;
+        try {
+            rowID = sqLiteDatabase.insert ("STOCK_QUOTES", null, values);
+            sqLiteDatabase.setTransactionSuccessful ();
+        } finally {
+            sqLiteDatabase.endTransaction ();
+        }
+        if (rowID != -1)
+            dataVersion.incrementAndGet ();
         return rowID;
     }
 
@@ -76,9 +91,15 @@ public class StockListDB extends SQLiteOpenHelper {
         values.put ("HASHED_NAME", hashedName);
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase ();
         sqLiteDatabase.beginTransaction ();
-        sqLiteDatabase.update ("STOCK_QUOTES", values, "STOCK_CODE = \'" + stockCode + "\'", null);
-        sqLiteDatabase.setTransactionSuccessful ();
-        sqLiteDatabase.endTransaction ();
+        int rows;
+        try {
+            rows = sqLiteDatabase.update ("STOCK_QUOTES", values, "STOCK_CODE = ?", new String[]{stockCode});
+            sqLiteDatabase.setTransactionSuccessful ();
+        } finally {
+            sqLiteDatabase.endTransaction ();
+        }
+        if (rows > 0)
+            dataVersion.incrementAndGet ();
 
     }
 
@@ -88,9 +109,12 @@ public class StockListDB extends SQLiteOpenHelper {
         values.put ("SUSPEND_NOTIFICATION", isSuspended);
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase ();
         sqLiteDatabase.beginTransaction ();
-        sqLiteDatabase.update ("STOCK_QUOTES", values, "HASHED_NAME =" + stockNameHash, null);
-        sqLiteDatabase.setTransactionSuccessful ();
-        sqLiteDatabase.endTransaction ();
+        try {
+            sqLiteDatabase.update ("STOCK_QUOTES", values, "HASHED_NAME = ?", new String[]{String.valueOf (stockNameHash)});
+            sqLiteDatabase.setTransactionSuccessful ();
+        } finally {
+            sqLiteDatabase.endTransaction ();
+        }
 
     }
 
@@ -125,29 +149,30 @@ public class StockListDB extends SQLiteOpenHelper {
         values.put ("INSERT_DATE", new DateTime ().getMillis ());
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase ();
         sqLiteDatabase.beginTransaction ();
-        sqLiteDatabase.insert ("HIST_STOCK_QUOTES", null, values);
-        sqLiteDatabase.setTransactionSuccessful ();
-        sqLiteDatabase.endTransaction ();
+        long rowID;
+        try {
+            rowID = sqLiteDatabase.insert ("HIST_STOCK_QUOTES", null, values);
+            sqLiteDatabase.setTransactionSuccessful ();
+        } finally {
+            sqLiteDatabase.endTransaction ();
+        }
+        // new history changes the RSI shown in the list
+        if (rowID != -1)
+            dataVersion.incrementAndGet ();
 
     }
 
 
     protected Cursor readHistoricalStockData (String id, int numberOfDays) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
-        StringBuilder sb = new StringBuilder ();
-        sb.append ("SELECT * FROM HIST_STOCK_QUOTES WHERE STOCK_SYMBOL = '");
-        sb.append (id);
-        sb.append ("'");
-        sb.append (" ORDER BY TRADE_DATE DESC LIMIT ");
-        sb.append (numberOfDays);
-        return readableDatabase.rawQuery (sb.toString (), null);
+        return readableDatabase.rawQuery ("SELECT * FROM HIST_STOCK_QUOTES WHERE STOCK_SYMBOL = ? " +
+                "ORDER BY TRADE_DATE DESC LIMIT " + numberOfDays, new String[]{id});
     }
 
     protected Cursor getRSIData (String stock_name) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
         return readableDatabase.rawQuery ("SELECT TRADE_DATE, JSON_OBJECT FROM HIST_STOCK_QUOTES " +
-                "WHERE STOCK_SYMBOL = '" + stock_name + "'" +
-                " ORDER BY TRADE_DATE ASC ", null);
+                "WHERE STOCK_SYMBOL = ? ORDER BY TRADE_DATE ASC", new String[]{stock_name});
     }
 
     protected Cursor readStockCodes () {
@@ -157,24 +182,29 @@ public class StockListDB extends SQLiteOpenHelper {
 
     protected long getIdFromStockCode (String code) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
-        Cursor cursor = readableDatabase.rawQuery ("SELECT HASHED_NAME FROM STOCK_QUOTES where STOCK_CODE = \'" + code + "\'", null);
-
         long id = 0l;
 
-        while (cursor.moveToNext ()) {
-            id = cursor.getLong (0);
+        try (Cursor cursor = readableDatabase.rawQuery ("SELECT HASHED_NAME FROM STOCK_QUOTES WHERE STOCK_CODE = ?", new String[]{code})) {
+            while (cursor.moveToNext ()) {
+                id = cursor.getLong (0);
+            }
         }
         return id;
     }
 
+    protected boolean stockExists (String code) {
+        return DatabaseUtils.queryNumEntries (this.getReadableDatabase (), "STOCK_QUOTES",
+                "STOCK_CODE = ?", new String[]{code}) > 0;
+    }
+
     protected Cursor readSuspendedNotification (String stockNameHash) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
-        return readableDatabase.rawQuery ("SELECT SUSPEND_NOTIFICATION FROM STOCK_QUOTES WHERE HASHED_NAME =" + stockNameHash, null);
+        return readableDatabase.rawQuery ("SELECT SUSPEND_NOTIFICATION FROM STOCK_QUOTES WHERE HASHED_NAME = ?", new String[]{stockNameHash});
     }
 
     protected Cursor readSuspendedNotificationById (String stockId) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase ();
-        return readableDatabase.rawQuery ("SELECT SUSPEND_NOTIFICATION FROM STOCK_QUOTES WHERE _ID=" + stockId, null);
+        return readableDatabase.rawQuery ("SELECT SUSPEND_NOTIFICATION FROM STOCK_QUOTES WHERE _ID = ?", new String[]{stockId});
     }
 
 /*
@@ -189,19 +219,25 @@ public class StockListDB extends SQLiteOpenHelper {
     protected void removeStockFromDB (String stockCode) {
         SQLiteDatabase writableDatabase = this.getWritableDatabase ();
         writableDatabase.beginTransaction ();
-        writableDatabase.execSQL ("delete from STOCK_QUOTES where STOCK_CODE = '" + stockCode + "'");
-        writableDatabase.execSQL ("delete from HIST_STOCK_QUOTES where  STOCK_SYMBOL = '" + stockCode + "'");
-        writableDatabase.setTransactionSuccessful ();
-        writableDatabase.endTransaction ();
+        int deleted;
+        try {
+            deleted = writableDatabase.delete ("STOCK_QUOTES", "STOCK_CODE = ?", new String[]{stockCode});
+            deleted += writableDatabase.delete ("HIST_STOCK_QUOTES", "STOCK_SYMBOL = ?", new String[]{stockCode});
+            writableDatabase.setTransactionSuccessful ();
+        } finally {
+            writableDatabase.endTransaction ();
+        }
+        if (deleted > 0)
+            dataVersion.incrementAndGet ();
     }
 
     protected boolean isNotifySuspended (int stockNameHash) {
-        Cursor cursor = this.readSuspendedNotification (String.valueOf (stockNameHash));
-
         int isSuspended = 0;
 
-        while (cursor.moveToNext ()) {
-            isSuspended = cursor.getInt (0);
+        try (Cursor cursor = this.readSuspendedNotification (String.valueOf (stockNameHash))) {
+            while (cursor.moveToNext ()) {
+                isSuspended = cursor.getInt (0);
+            }
         }
 
         return isSuspended == 1;

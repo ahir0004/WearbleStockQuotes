@@ -22,9 +22,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="fill_vertical"
+        android:layoutDirection="ltr"
         android:paddingBottom="150px"
-        android:paddingLeft="180px"
-        android:paddingRight="120px"
+        android:paddingStart="180px"
+        android:paddingEnd="120px"
         android:paddingTop="150px">
 
     </FrameLayout>
@@ -47,11 +48,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="bottom"
-        android:orientation="horizontal"
-        android:paddingLeft="160px"
-        android:paddingRight="140px"
-        android:textAlignment="center"
-        android:weightSum="2">
+        android:layoutDirection="ltr"
+        android:orientation="horizontal">
 
 
     </LinearLayout>

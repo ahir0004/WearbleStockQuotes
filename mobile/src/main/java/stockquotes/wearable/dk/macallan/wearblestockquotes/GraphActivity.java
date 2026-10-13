@@ -2,30 +2,35 @@ package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Created by AHI003 on 01-08-2017.
@@ -33,6 +38,7 @@ import java.util.Locale;
 
 public class GraphActivity extends Activity {
 
+    private static final String TAG = "GraphActivity";
     private static int defaultDays = 5;
     private ArrayList<Double> sma;
     private int windowHeight;
@@ -48,18 +54,16 @@ public class GraphActivity extends Activity {
     private int i = 0;
     private ArrayList<DateTime> stockDates;
     private String rsi;
+    private final ExecutorService loadExecutor = Executors.newSingleThreadExecutor ();
+    private final Handler mainHandler = new Handler (Looper.getMainLooper ());
+    // destroyed, loadGeneration and the chart data fields are main-thread only
+    private boolean destroyed;
+    private int loadGeneration;
 
 
     public void shiftPeriod (View view) {
         int periods[] = {defaultDays, 20, 60, 200};
-        days2Chart = periods[i == (periods.length - 1) ? i = 0 : ++i];
-
-        try {
-            initializeGraphData (stockId);
-            calculateAndDisplayCoordinates ();
-        } catch (JSONException e) {
-            e.printStackTrace ();
-        }
+        requestGraphData (periods[i == (periods.length - 1) ? i = 0 : ++i]);
     }
 
 
@@ -76,64 +80,123 @@ public class GraphActivity extends Activity {
         xValuesLLayout = (LinearLayout) findViewById (R.id.x_axis_linearlayout);
         graphViewFrameLayout = (FrameLayout) findViewById (R.id.graph_view_framelayout);
         stockName = getIntent ().getStringExtra ("STOCK_NAME");
-        stockId = getIntent ().getStringExtra ("STOCK_CODE").trim ();
+        String code = getIntent ().getStringExtra ("STOCK_CODE");
+        if (code == null) {
+            finish ();
+            return;
+        }
+        stockId = code.trim ();
+        if (stockName == null)
+            stockName = stockId;
         rsi = getIntent ().getStringExtra ("RSI");
+        if (rsi == null || rsi.isEmpty ())
+            rsi = RSI.NOT_AVAILABLE;
         days2Chart = getIntent ().getIntExtra ("chartDays", 5);
 
-        try {
-            loadSMA (stockId, 60);
-            initializeGraphData (stockId);
-            calculateAndDisplayCoordinates ();
-        } catch (JSONException e) {
-            e.printStackTrace ();
-        }
+        graphViewFrameLayout.addOnLayoutChangeListener ((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (right - left != oldRight - oldLeft)
+                v.post (this::alignXAxisLabels);
+        });
+        requestGraphData (days2Chart);
 
+    }
+
+    @Override
+    protected void onDestroy () {
+        destroyed = true;
+        loadExecutor.shutdownNow ();
+        mainHandler.removeCallbacksAndMessages (null);
+        super.onDestroy ();
+    }
+
+    private void requestGraphData (final int days) {
+        final int generation = ++loadGeneration;
+        final String id = stockId;
+        try {
+            loadExecutor.execute (() -> {
+                ArrayList<Double> values = new ArrayList<> ();
+                ArrayList<DateTime> dates = new ArrayList<> ();
+                ArrayList<Double> smaValues = new ArrayList<> ();
+                try {
+                    parseGraphData (getGraphDataFromDB (id, days), values, dates);
+                } catch (RuntimeException e) {
+                    Log.w (TAG, "Failed to load graph data for " + id, e);
+                    values.clear ();
+                    dates.clear ();
+                }
+                try {
+                    smaValues = calculateSMA (getGraphDataFromDB (id, 250), 60);
+                } catch (RuntimeException e) {
+                    Log.w (TAG, "Failed to calculate SMA for " + id, e);
+                    smaValues = new ArrayList<> ();
+                }
+                final ArrayList<Double> smaResult = smaValues;
+                mainHandler.post (() -> onGraphDataLoaded (generation, days, values, dates, smaResult));
+            });
+        } catch (RejectedExecutionException ignored) {
+        }
+    }
+
+    private void onGraphDataLoaded (int generation, int days, ArrayList<Double> values,
+                                    ArrayList<DateTime> dates, ArrayList<Double> smaValues) {
+        if (destroyed || isFinishing () || generation != loadGeneration)
+            return;
+        days2Chart = days;
+        stockValues = values;
+        stockDates = dates;
+        sma = smaValues;
+        calculateAndDisplayCoordinates ();
     }
 
 
     protected ArrayList<String> getGraphDataFromDB (String id, int days) {
-        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readHistoricalStockData (id, days);
         ArrayList<String> histDataList = new ArrayList<> ();
-        while (cursor.moveToNext ()) {
-            histDataList.add (cursor.getString (2));
+        try (Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readHistoricalStockData (id, days)) {
+            while (cursor.moveToNext ()) {
+                histDataList.add (cursor.getString (2));
+            }
         }
         return histDataList;
     }
 
-    private void initializeGraphData (String id) throws JSONException {
-
-        ArrayList<String> jsonObjects = getGraphDataFromDB (id, days2Chart);
-        stockValues = new ArrayList<Double> ();
-        stockDates = new ArrayList<DateTime> ();
+    static void parseGraphData (List<String> jsonObjects, List<Double> values, List<DateTime> dates) {
 
         for (int i = 0; i < jsonObjects.size (); i++) {
-            JSONObject jsonObj = new JSONObject (jsonObjects.get (i));
-
+            double value;
+            long tmp;
             try {
-                String close = jsonObj.getString("close");
-                if ("null".equals(close))
-                    stockValues.add(0.0);
-                else
-                    stockValues.add(new Double(close));
-            } catch (JSONException e) {
+                JSONObject jsonObj = new JSONObject (jsonObjects.get (i));
+                String close = jsonObj.getString ("close");
+                value = "null".equals (close) ? 0.0 : Double.parseDouble (close);
+                tmp = Long.parseLong (jsonObj.get ("date").toString ());
+            } catch (JSONException | NumberFormatException | NullPointerException e) {
                 continue;
             }
-            long tmp = Long.parseLong (jsonObj.get ("date").toString ());
-            DateFormat df =
-                    new SimpleDateFormat ("MMM d, yyyy", Locale.US);
-            Date d = new Date (tmp * 1000l);
-            DateTime dt = new DateTime (d);
-            stockDates.add (dt);
+            values.add (value);
+            dates.add (new DateTime (new Date (tmp * 1000l)));
         }
     }
 
     private void calculateAndDisplayCoordinates () {
         TextView xs;
         TextView ys;
-        xValuesLLayout.removeAllViewsInLayout ();
-        yValuesLLayout.removeAllViewsInLayout ();
+        xValuesLLayout.removeAllViews ();
+        yValuesLLayout.removeAllViews ();
+        graphViewFrameLayout.removeAllViews ();
 
-        ArrayList<Double> yCoords = (ArrayList<Double>) stockValues.clone ();
+        TextView headLine = (TextView) findViewById (R.id.headline_textView);
+        headLine.setText (stockName.toUpperCase (Locale.ROOT) + " (" + days2Chart + " days)         RSI: " + rsi);
+        headLine.setTextColor (Color.YELLOW);
+        headLine.setTextSize (25.0f);
+        headLine.setGravity (Gravity.CENTER_HORIZONTAL);
+        headLine.setBackgroundColor (Color.TRANSPARENT);
+
+        if (stockValues.size () < 2) {
+            Toast.makeText (this, R.string.graph_not_enough_data, Toast.LENGTH_LONG).show ();
+            return;
+        }
+
+        ArrayList<Double> yCoords = new ArrayList<> (stockValues);
         Collections.sort (stockDates);
         Collections.sort (yCoords);
 
@@ -141,18 +204,14 @@ public class GraphActivity extends Activity {
         double min = 0.0f;
         double midlle = 0.0f;
 
-        double[] yCoordsArr = new double[stockValues.size ()];
         int numberOfYs = yCoords.size ();
+        double[] yCoordsArr = new double[Math.max (3, numberOfYs)];
         float yWeight = 0.5f;
 
-        if (numberOfYs > 0) {
-            max = Collections.max (yCoords);
-            min = Collections.min (yCoords);
-        } else {
-            return;
-        }
+        max = Collections.max (yCoords);
+        min = Collections.min (yCoords);
         midlle = (max + min) / 2;
-        double delta = (max - min) / (yCoordsArr.length - 1);
+        double delta = (max - min) / (numberOfYs - 1);
 
 
         yCoordsArr[0] = min;
@@ -204,11 +263,8 @@ public class GraphActivity extends Activity {
 
                 xs.setText (dates[i].toString (DateTimeFormat.forPattern ("d MMM")).replace (".", ""));
                 xs.setTextColor (Color.WHITE);
-                xs.setLayoutParams (new LinearLayout.LayoutParams (
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        140,
-                        2.0f
-                ));
+                xs.setGravity (Gravity.CENTER_HORIZONTAL);
+                xs.setLayoutParams (new LinearLayout.LayoutParams (0, 140, 1.0f));
 
                 xValuesLLayout.addView (xs);
             }
@@ -219,74 +275,64 @@ public class GraphActivity extends Activity {
                 xs = new TextView (getApplicationContext ());
                 xs.setText (date.toString (DateTimeFormat.forPattern ("d MMM")).replace (".", ""));
                 xs.setTextColor (Color.WHITE);
-                xs.setLayoutParams (new LinearLayout.LayoutParams (
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        140,
-                        0.5f
-                ));
+                xs.setGravity (Gravity.CENTER_HORIZONTAL);
+                xs.setLayoutParams (new LinearLayout.LayoutParams (0, 140, 1.0f));
 
                 xValuesLLayout.addView (xs);
             }
         }
+        alignXAxisLabels ();
         graphViewFrameLayout.addView (new ChartView (getApplicationContext ()));
-        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-
-        TextView headLine = (TextView) findViewById (R.id.headline_textView);
-
-        //String rsi = new RSI (14, stockCode, StockListDB.getInstance (getBaseContext ()), "").calculate ();
-
-        headLine.setText (stockName.toUpperCase () + " (" + days2Chart + " days)         RSI: " + rsi);
-        headLine.setTextColor (Color.YELLOW);
-        headLine.setTextSize (25.0f);
-        headLine.setGravity (Gravity.CENTER_HORIZONTAL);
-        headLine.setBackgroundColor (Color.TRANSPARENT);
     }
 
-    private void loadSMA (String stockId, int days) {
+    // centres the equal-width label cells on the chart's first..last point x positions
+    private void alignXAxisLabels () {
+        int width = graphViewFrameLayout.getWidth ();
+        if (width == 0)
+            return;
+        int[] insets = AxisLabelLayout.insets (width, graphViewFrameLayout.getPaddingStart (),
+                graphViewFrameLayout.getPaddingEnd (), xValuesLLayout.getChildCount ());
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) xValuesLLayout.getLayoutParams ();
+        if (params.getMarginStart () == insets[0] && params.getMarginEnd () == insets[1])
+            return;
+        // negative margins let edge cells extend past the screen so their centres still match the chart
+        params.setMarginStart (insets[0]);
+        params.setMarginEnd (insets[1]);
+        xValuesLLayout.setLayoutParams (params);
+    }
 
-        sma = new ArrayList<> ();
-        Cursor cursor = StockListDB.getInstance (getApplicationContext ()).readHistoricalStockData (stockId, 250);
-        ArrayList<String> histDatesList = new ArrayList<> ();
-        ArrayList<String> histDataList = new ArrayList<> ();
+    static ArrayList<Double> calculateSMA (List<String> histDataList, int days) {
 
-        while (cursor.moveToNext ()) {
-            histDatesList.add (cursor.getString (1));
-            histDataList.add (cursor.getString (2));
-        }
+        ArrayList<Double> sma = new ArrayList<> ();
 
-        for (int i = 0; i < histDataList.size () - 60; i++) {
-            sma.add (calculateAverage (histDataList, (i)));
+        for (int i = 0; i < histDataList.size () - days; i++) {
+            double average = calculateAverage (histDataList, i, days);
+            if (!Double.isNaN (average))
+                sma.add (average);
         }
 
         Collections.reverse (sma);
+        return sma;
     }
 
-    private double calculateAverage (ArrayList<String> data, int i) {
+    private static double calculateAverage (List<String> data, int i, int days) {
         double theAverage = 0.0;
-        double close = 0.0;
+        int count = 0;
 
-        for (int j = i; j < (60 + i); j++) {
+        for (int j = i; j < (days + i); j++) {
 
             if (j > data.size () - 1) {
                 break;
             }
             try {
                 JSONObject jsonObject = new JSONObject (data.get (j));
-                close = new Double (jsonObject.get ("close").toString ());
-            } catch (JSONException e) {
+                theAverage = theAverage + Double.parseDouble (jsonObject.get ("close").toString ());
+                count++;
+            } catch (JSONException | NumberFormatException | NullPointerException e) {
                 e.printStackTrace ();
-                continue;
             }
-            theAverage = theAverage + close;
         }
-        return theAverage / 60.0;
-    }
-
-    @Override
-    protected void onPause () {
-
-        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        super.onPause ();
+        return count == 0 ? Double.NaN : theAverage / count;
     }
 
     private class ChartView extends View {
@@ -295,6 +341,7 @@ public class GraphActivity extends Activity {
 
         public ChartView (Context context) {
             super (context);
+            setBackgroundColor (Color.WHITE);
         }
 
         @Override
@@ -326,7 +373,7 @@ public class GraphActivity extends Activity {
 
                 } else {
                     double diff = stockValues.get (j) - min;
-                    double tmp = ((diff / delta) * h);
+                    double tmp = delta == 0 ? h / 2.0 : ((diff / delta) * h);
 
                     lineCoords[i] = h - tmp;
                     j--;
@@ -346,8 +393,6 @@ public class GraphActivity extends Activity {
             paintSMA.setColor (Color.BLUE);
             paintSMA.setStrokeWidth (3f);
 
-            setBackgroundColor (Color.WHITE);
-
             for (int i = 0; i < (lineCoords.length - 2); i = i + 2) {
 
                 float startX = (float) lineCoords[i];
@@ -363,7 +408,7 @@ public class GraphActivity extends Activity {
 
             //if(lineCoords.length > 100 ) {
             int k = 2;
-            for (int j = sma.size (); j > 2; j--) {
+            for (int j = sma.size (); j > 2 && deltaY != 0; j--) {
 
                 if ((k + 2) > lineCoords.length) {
                     break;

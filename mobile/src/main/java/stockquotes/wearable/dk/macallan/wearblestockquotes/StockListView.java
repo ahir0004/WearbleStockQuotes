@@ -1,7 +1,6 @@
 package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -14,7 +13,6 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 
@@ -32,7 +30,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
     // private ArrayList<String> quotesArrayList;
 
     public StockListView (Context context) {
-        super (context, null);
+        this (context, null);
 
     }
 
@@ -65,36 +63,40 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
             @Override
             public View getView (int position, View convertView, ViewGroup parent) {
 
-                LayoutInflater inflater = ((MainActivity) getContext ()).getLayoutInflater ();
-                View view = inflater.inflate (R.layout.list_layout, null, true);
+                View view = convertView;
+                if (view == null) {
+                    view = LayoutInflater.from (getContext ()).inflate (R.layout.list_layout, parent, false);
+                }
                 view.setBackgroundColor (Color.rgb (40, 40, 40));
-                HashMap hashMap;
+                HashMap<String, String> hashMap;
                 String theChange = "";
 
                 if (this.getCount () > 0) {
                     //txt = this.getItem (position);
                     hashMap = this.getItem (position);
-                    if ("".equals (hashMap.get ("CHANGE").toString ()))
+                    if ("".equals (valueOf (hashMap, "CHANGE")))
                         theChange = "";
                     else {
-                        theChange = hashMap.get ("CHANGE").toString () + "/" + hashMap.get ("CHANGE_PCT").toString ();
+                        theChange = valueOf (hashMap, "CHANGE") + "/" + valueOf (hashMap, "CHANGE_PCT");
                     }
                     TextView tvName = ((TextView) view.findViewById (R.id.stock_name));
-                    tvName.setText (hashMap.get ("NAME").toString ());
+                    tvName.setText (valueOf (hashMap, "NAME"));
 
-                    if ("".equals (hashMap.get ("LTP").toString ())) {
+                    if ("".equals (valueOf (hashMap, "LTP"))) {
 
                         blink (tvName, -1, 2000);
+                    } else {
+                        tvName.clearAnimation ();
                     }
 
                     TextView tvLTP = ((TextView) view.findViewById (R.id.stock_rate));
-                    tvLTP.setText (hashMap.get ("LTP").toString ());
+                    tvLTP.setText (valueOf (hashMap, "LTP"));
 
 
                     TextView tvCng = ((TextView) view.findViewById (R.id.change));
                     tvCng.setText (theChange);
                     TextView tvLTD = ((TextView) view.findViewById (R.id.last_trade_date));
-                    tvLTD.setText (hashMap.get ("LTT").toString ());
+                    tvLTD.setText (valueOf (hashMap, "LTT"));
                     //TextView tvRSI = ((TextView) view.findViewById (R.id.rsi));
                     // Set a background color for ListView regular row/item
                     //tvRSI.setBackgroundColor (Color.parseColor ("#80000000"));
@@ -159,27 +161,11 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
 
     @Override
     public void onItemClick (AdapterView<?> parent, View view, int position, long id) {
-        /*String stockId = parent.getItemAtPosition (position).toString ().split (":")[0];
-        if (isOnItemClickable) {
-            stockListDB.removeStockFromDB (stockId);
-            setViewListData (new ArrayList<String> (Arrays.asList (getRequestCodes ())));
-            populateListView ();
-        }*/
     }
 
-    protected String[] getRequestCodes () {
-        Cursor cursor = StockListDB.getInstance (getContext ()).readStockCodes ();
-        StringBuilder stringBuilder = new StringBuilder ();
-        ArrayList<String> requestCodesList = new ArrayList<> ();
-        while (cursor.moveToNext ()) {
-            requestCodesList.add (stringBuilder.append (cursor.getInt (0))
-                    .append (": ")
-                    .append (cursor.getString (1))
-                    .toString ());
-            stringBuilder.setLength (0);
-        }
-        return requestCodesList.toArray (new String[requestCodesList.size ()]);
-
+    private static String valueOf (HashMap<String, String> map, String key) {
+        String value = map.get (key);
+        return value == null ? "" : value;
     }
 
     private void blink (View view, int repeatCount, long duration) {
@@ -197,7 +183,7 @@ public class StockListView extends ListView implements AdapterView.OnItemClickLi
         getAdapter ().sort (new Comparator<HashMap<String, String>> () {
             @Override
             public int compare (HashMap<String, String> o1, HashMap<String, String> o2) {
-                return o1.get ("NAME").compareTo (o2.get ("NAME"));
+                return valueOf (o1, "NAME").compareTo (valueOf (o2, "NAME"));
             }
         });
         adapter.notifyDataSetChanged ();

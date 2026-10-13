@@ -5,4 +5,12 @@
     <string name="hello_world">Hello List</string>
     <string name="banner_ad_unit_id">ca-app-pub-3940256099942544/6300978111</string>
     <string name="refresh">Refresh</string>
+    <string name="stock_already_added">%1$s is already in the list</string>
+    <string name="stock_add_failed">Could not add %1$s</string>
+    <string name="graph_not_enough_data">Not enough data to draw a chart yet</string>
+    <string name="notification_channel_name">Stock alerts</string>
+    <string name="notification_rationale_title">Allow stock alerts?</string>
+    <string name="notification_rationale_message">Notifications are used to alert you when a stock in your list moves significantly.</string>
+    <string name="notification_rationale_allow">Allow</string>
+    <string name="notification_rationale_not_now">Not now</string>
 </resources>

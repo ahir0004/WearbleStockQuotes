@@ -2,134 +2,91 @@ package stockquotes.wearable.dk.macallan.wearblestockquotes;
 
 import android.database.Cursor;
 
-import org.joda.time.DateTime;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Created by AHI003 on 27-09-2017.
  */
 
 public class RSI {
-    private final ArrayList<Averages> avgList;
-    private final ArrayList<Double> prices;
-    private int periodLength;
+    public static final String NOT_AVAILABLE = "-";
+
+    private final List<Double> prices;
+    private final int periodLength;
 
 
-    public RSI (int periodLength, String symbol, StockListDB db, String latestDayRate) {
+    public RSI (int periodLength, String symbol, StockListDB db, double latestPrice) {
         super ();
         this.periodLength = periodLength;
-        avgList = new ArrayList<Averages> ();
         prices = getPrices (symbol, db);
-        if (!"".equals (latestDayRate) && prices.size () > 0)
-            prices.add (Double.parseDouble (latestDayRate));
+        if (!Double.isNaN (latestPrice) && !prices.isEmpty ())
+            prices.add (latestPrice);
 
     }
 
-    private ArrayList getPrices (String symbol, StockListDB db) {
+    private List<Double> getPrices (String symbol, StockListDB db) {
 
-        ArrayList localAL = new ArrayList ();
+        List<Double> localAL = new ArrayList<> ();
 
-        Cursor cursor = db.getRSIData (symbol);
-
-        while (cursor.moveToNext ()) {
-            JSONObject jsonObject = null;
-            try {
-                DateTime date = new DateTime (1000l * cursor.getLong (0));
-                jsonObject = new JSONObject (cursor.getString (1));
-                localAL.add (Double.parseDouble (jsonObject.get ("close").toString ()));
-            } catch (Exception e) {
-                e.printStackTrace ();
-                continue;
+        try (Cursor cursor = db.getRSIData (symbol)) {
+            while (cursor.moveToNext ()) {
+                String json = cursor.getString (1);
+                if (json == null) {
+                    continue;
+                }
+                try {
+                    localAL.add (Double.parseDouble (new JSONObject (json).get ("close").toString ()));
+                } catch (JSONException | NumberFormatException e) {
+                    e.printStackTrace ();
+                }
             }
-
-
         }
         return localAL;
     }
 
 
     public String calculate () {
+        double value = calculate (prices, periodLength);
+        if (Double.isNaN (value))
+            return NOT_AVAILABLE;
 
-        if (prices.size () == 0)
-            return "";
-
-
-        double value = 0;
-        int pricesSize = prices.size ();
-        int lastPrice = pricesSize - 1;
-        int firstPrice = 0;
-
-        double gains = 0;
-        double losses = 0;
-        double avgUp = 0;
-        double avgDown = 0;
-
-        double change = prices.get (firstPrice + 1)
-                - prices.get (firstPrice);
-
-        gains = Math.max (0, change);
-        losses = Math.max (0, -change);
-
-        int i = 2;
-
-        while (i < pricesSize) {
-
-            change = prices.get (i)
-                    - prices.get (i - 1);
-
-            if (i > periodLength) {
-                if (avgList.isEmpty ()) {
-
-                    avgUp = gains / periodLength;
-                    avgDown = losses / periodLength;
-                    avgList.add (new Averages (avgUp, avgDown));
-                } else {
-
-                    gains = Math.max (0, change);
-                    losses = Math.max (0, -change);
-
-                    Averages avg = avgList.get (avgList.size () - 1);
-                    avgUp = avg.getAvgUp ();
-                    avgDown = avg.getAvgDown ();
-                    avgUp = ((avgUp * (periodLength - 1)) + gains) / (periodLength);
-                    avgDown = ((avgDown * (periodLength - 1)) + losses)
-                            / (periodLength);
-                    avgList.add (new Averages (avgUp, avgDown));
-
-                }
-            } else {
-
-                gains += Math.max (0, change);
-                losses += Math.max (0, -change);
-            }
-            i++;
-        }
-        value = 100 - (100 / (1 + (avgUp / avgDown)));
-
-        NumberFormat formatter = new DecimalFormat ("#0.00");
+        NumberFormat formatter = new DecimalFormat ("#0.00", DecimalFormatSymbols.getInstance (Locale.US));
         return formatter.format (value);
     }
 
-    private class Averages {
+    /**
+     * Wilder's RSI over the given closes (oldest first). Returns NaN when there are fewer than period + 1 closes.
+     */
+    public static double calculate (List<Double> closes, int period) {
+        if (closes == null || period <= 0 || closes.size () < period + 1)
+            return Double.NaN;
 
-        private final double avgUp;
-        private final double avgDown;
+        double gains = 0;
+        double losses = 0;
+        for (int i = 1; i <= period; i++) {
+            double change = closes.get (i) - closes.get (i - 1);
+            gains += Math.max (0, change);
+            losses += Math.max (0, -change);
+        }
+        double avgUp = gains / period;
+        double avgDown = losses / period;
 
-        public Averages (double up, double down) {
-            this.avgDown = down;
-            this.avgUp = up;
+        for (int i = period + 1; i < closes.size (); i++) {
+            double change = closes.get (i) - closes.get (i - 1);
+            avgUp = ((avgUp * (period - 1)) + Math.max (0, change)) / period;
+            avgDown = ((avgDown * (period - 1)) + Math.max (0, -change)) / period;
         }
 
-        public double getAvgUp () {
-            return avgUp;
-        }
-
-        public double getAvgDown () {
-            return avgDown;
-        }
+        if (avgDown == 0)
+            return avgUp > 0 ? 100 : 50;
+        return 100 - (100 / (1 + (avgUp / avgDown)));
     }
 }
